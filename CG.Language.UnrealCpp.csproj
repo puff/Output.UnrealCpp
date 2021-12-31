@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<AssemblyName>UnrealCpp</AssemblyName>
+		<RootNamespace>CG.Language</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Remove="UnrealCpp\External\MemoryManager.cpp" />
+		<None Remove="UnrealCpp\External\MemoryManager.h" />
+		<None Remove="UnrealCpp\Internal\Pch.h" />
+		<None Remove="UnrealCpp\Internal\UnitTest.cpp" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="UnrealCpp\External\MemoryManager.cpp" />
+		<EmbeddedResource Include="UnrealCpp\External\MemoryManager.h" />
+		<EmbeddedResource Include="UnrealCpp\Internal\pch.h" />
+		<EmbeddedResource Include="UnrealCpp\Internal\UnitTest.cpp" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\CG.Framework\CG.Framework.csproj" />
+	</ItemGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
+	  <Exec Command="xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)build\Settings\Plugins\Language\&quot; /F /Y /I" />
+	</Target>
+
+</Project>
