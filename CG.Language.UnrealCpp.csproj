@@ -7,6 +7,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Remove=".gitignore" />
+		<None Remove="LICENSE" />
+		<None Remove="README.md" />
 		<None Remove="UnrealCpp\External\MemoryManager.cpp" />
 		<None Remove="UnrealCpp\External\MemoryManager.h" />
 		<None Remove="UnrealCpp\Internal\Pch.h" />
