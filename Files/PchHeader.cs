@@ -20,6 +20,6 @@ public class PchHeader : IncludeFile<UnrealCpp>
             throw new InvalidOperationException("Invalid language target.");
 
         // Read File
-        return await CGUtils.ReadEmbeddedFileAsync(Path.Combine("Internal", FileName), this.GetType().Assembly).AsTask().ConfigureAwait(false);
+        return await CGUtils.ReadEmbeddedFileAsync(Path.Combine("Internal", FileName), this.GetType().Assembly).ConfigureAwait(false);
     }
 }
