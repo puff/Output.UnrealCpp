@@ -437,11 +437,20 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             {
                 "class UObject"
             };
-        }
 
-        cppModel.Defines = cppModel.Conditions
-            .Select(c => new CppDefine() { Name = c })
-            .ToList();
+            CppFunction initFunc = cppModel.Functions.Find(cf => cf.Name == "InitSdk" && cf.Params.Count == 0);
+            if (initFunc is not null)
+            {
+                for (var i = 0; i < initFunc.Body.Count; i++)
+                {
+                    string s = initFunc.Body[i]
+                        .Replace("MODULE_NAME", SdkFile.GameModule)
+                        .Replace("GOBJ_OFFSET", $"0x{SdkFile.GObjectsOffset:X6}")
+                        .Replace("GNAME_OFFSET", $"0x{SdkFile.GNamesOffset:X6}");
+                    initFunc.Body[i] = s;
+                }
+            }
+        }
     }
 
     private void PrepareEngineFunction(EngineStruct parent, EngineFunction eFunc)
@@ -480,6 +489,11 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         return cppStruct;
     }
 
+    private IEnumerable<CppDefine> GetDefines(IEnginePackage enginePackage)
+    {
+        return enginePackage.Defines.Select(ec => ec.ToCpp());
+    }
+
     private IEnumerable<CppConstant> GetConstants(IEnginePackage enginePackage)
     {
         return enginePackage.Constants.Select(ec => ec.ToCpp());
@@ -492,59 +506,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
 
     private IEnumerable<CppFunction> GetFunctions(IEnginePackage enginePackage)
     {
-        var ret = new List<CppFunction>();
-
-        // Get structs functions
-        ret.AddRange(enginePackage.Structs.SelectMany(es => es.Methods).Select(ef => ef.ToCpp()));
-
-        // Get class functions
-        ret.AddRange(enginePackage.Classes.SelectMany(ec => ec.Methods).Select(ef => ef.ToCpp()));
-
-        //// Includes
-        //var includes = new List<string>
-        //{
-        //    Options[CppOptions.PrecompileSyntax].Value != "true" ? "\"../SDK.h\"" : "\"../pch.h\""
-        //};
-
-        //BuildReadExternalMethod(s, false);
-        //foreach (EngineClass c in enginePackage.Classes)
-        //{
-
-        //    foreach (EngineFunction m in c.Methods)
-        //    {
-        //        // Method Info
-        //        builder.AppendLine("// Function:");
-        //        builder.AppendLine($"//\t\tOffset -> 0x{m.NativeOffset:X8}");
-        //        builder.AppendLine($"//\t\tName   -> {m.FullName}");
-        //        builder.AppendLine($"//\t\tFlags  -> ({m.FlagsString})");
-
-        //        if (m.Parameters.Count > 0)
-        //        {
-        //            builder.AppendLine("// Parameters:");
-        //            foreach (EngineParameter param in m.Parameters)
-        //            {
-        //                if (param.Name.StartsWith("UnknownData_") && param.Name.EndsWith("]"))
-        //                    continue;
-
-        //                builder.AppendLine($"//\t\t{param.Type,-50} {param.Name,-58} ({param.FlagsString})");
-        //            }
-        //        }
-
-        //        builder.AppendLine(BuildMethodSignature(m, c, false));
-        //        builder.AppendLine(BuildMethodBody(c, m) + Environment.NewLine);
-        //    }
-
-        //    if (processProps != LangProps.External)
-        //        continue;
-
-        //    builder.AppendLine(BuildReadExternalMethod(c, false));
-        //}
-
-        //builder.Append(GetFileFooter());
-
-        //return ValueTask.FromResult(builder);
-
-        return ret;
+        return enginePackage.Functions.Select(ef => ef.ToCpp());
     }
 
     private IEnumerable<CppStruct> GetStructs(IEnginePackage enginePackage)
@@ -570,7 +532,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             {
                 Name = $"{@class.NameCpp}_{func.Name}_Params",
                 IsClass = false,
-                Comment = new List<string>() { func.FullName }
+                Comments = new List<string>() { func.FullName }
             };
 
             foreach (EngineParameter param in func.Parameters)
@@ -677,10 +639,11 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             Name = enginePackage.Name,
             BeforeNameSpace = $"#ifdef _MSC_VER{Environment.NewLine}\t#pragma pack(push, 0x{SdkFile.GlobalMemberAlignment:X2}){Environment.NewLine}#endif",
             AfterNameSpace = $"#ifdef _MSC_VER{Environment.NewLine}\t#pragma pack(pop){Environment.NewLine}#endif",
-            /*Defines = ,*/
             HeadingComment = new List<string>() { $"Name: {SdkFile.GameName}", $"Version: {SdkFile.GameVersion}" },
             NameSpace = SdkFile.Namespace,
             Pragmas = new List<string>() { "once" },
+            Defines = GetDefines(enginePackage).ToList(),
+            Functions = GetFunctions(enginePackage).ToList(),
             Constants = GetConstants(enginePackage).ToList(),
             Enums = GetEnums(enginePackage).ToList(),
             Structs = structs,
@@ -769,6 +732,8 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         foreach (CppStruct cppStruct in structs)
         {
             EngineStruct es = SdkFile.MissedStructs.Find(es => es.NameCpp == cppStruct.Name);
+            if (es is null)
+                throw new Exception($"Can't find missing struct '{cppStruct.Name}'");
 
             cppStruct.Variables.Add(new CppVariable()
             {

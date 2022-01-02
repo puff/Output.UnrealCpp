@@ -2,12 +2,29 @@
 using System.Linq;
 using System.Text;
 using CG.Framework.Engines.Models;
+using CG.Framework.Helper;
 using LangPrint.Cpp;
 
 namespace CG.Language.Helper;
 
 public static class LangPrintHelper
 {
+    /// <summary>
+    /// Convert <see cref="EngineDefine"/> to <see cref="CppDefine"/>
+    /// </summary>
+    /// <param name="define">Define to convert</param>
+    /// <returns>Converted <see cref="CppConstant"/></returns>
+    internal static CppDefine ToCpp(this EngineDefine define)
+    {
+        return new CppDefine()
+        {
+            Name = define.Name,
+            Value = define.Value,
+            Conditions = define.Conditions,
+            Comments = define.Comments,
+        };
+    }
+
     /// <summary>
     /// Convert <see cref="EngineEnum"/> to <see cref="CppEnum"/>
     /// </summary>
@@ -22,8 +39,8 @@ public static class LangPrintHelper
             IsClass = true,
             Values = eEnum.Values.Select(kv => new CppNameValue() { Name = kv.Key, Value = kv.Value }).ToList(),
             Conditions = eEnum.Conditions,
-        }
-        .WithComment(new List<string>() { eEnum.FullName });
+            Comments = eEnum.Comments,
+        }.WithComment(new List<string>() { eEnum.FullName });
     }
 
     /// <summary>
@@ -39,6 +56,7 @@ public static class LangPrintHelper
             Type = constant.Type,
             Value = constant.Value,
             Conditions = constant.Conditions,
+            Comments = constant.Comments,
         };
     }
 
@@ -72,9 +90,10 @@ public static class LangPrintHelper
             Friend = variable.Friend,
             Extern = false,
             Union = variable.Union,
-            Conditions = variable.Conditions
-        }
-        .WithInlineComment(inlineComment.ToString());
+            InlineComment = variable.Comment,
+            Conditions = variable.Conditions,
+            Comments = variable.Comments,
+        }.WithInlineComment(inlineComment.ToString());
     }
 
     /// <summary>
@@ -88,7 +107,8 @@ public static class LangPrintHelper
         {
             Name = param.Name,
             Type = (param.PassByReference ? "const " : "") + param.Type + (param.PassByReference ? "&" : (param.ParamKind == FuncParameterKind.Out ? "*" : "")),
-            Conditions = param.Conditions
+            Conditions = param.Conditions,
+            Comments = param.Comments,
         };
     }
 
@@ -103,24 +123,32 @@ public static class LangPrintHelper
             .Where(p => p.ParamKind != FuncParameterKind.Return && !(p.Name.StartsWith("UnknownData_") && p.Type == "unsigned char"))
             .ToList();
 
-        var comments = new List<string>()
+        List<string> comments;
+        if (!func.Comments.IsEmpty())
         {
-            "Function:",
-            $"\t\tOffset -> 0x{func.NativeOffset:X8}",
-            $"\t\tName   -> {func.FullName}",
-            $"\t\tFlags  -> ({func.FlagsString})",
-        };
-
-        if (@params.Count > 0)
-            comments.Add("Parameters:");
-
-        foreach (EngineParameter param in @params)
+            comments = func.Comments;
+        }
+        else
         {
-            string comment = string.IsNullOrWhiteSpace(param.FlagsString)
-                ? $"\t\t{param.Type,-50} {param.Name}"
-                : $"\t\t{param.Type,-50} {param.Name,-58} ({param.FlagsString})";
+            comments = new List<string>()
+            {
+                "Function:",
+                $"\t\tOffset -> 0x{func.NativeOffset:X8}",
+                $"\t\tName   -> {func.FullName}",
+                $"\t\tFlags  -> ({func.FlagsString})",
+            };
 
-            comments.Add(comment);
+            if (@params.Count > 0)
+                comments.Add("Parameters:");
+
+            foreach (EngineParameter param in @params)
+            {
+                string comment = string.IsNullOrWhiteSpace(param.FlagsString)
+                    ? $"\t\t{param.Type,-50} {param.Name}"
+                    : $"\t\t{param.Type,-50} {param.Name,-58} ({param.FlagsString})";
+
+                comments.Add(comment);
+            }
         }
 
         bool isStatic = func.Static;
@@ -140,8 +168,8 @@ public static class LangPrintHelper
             Friend = func.Friend,
             Inline = func.Inline,
             Conditions = func.Conditions,
-        }
-        .WithComment(comments);
+            Comments = func.Comments,
+        }.WithComment(comments);
     }
 
     /// <summary>
@@ -165,8 +193,8 @@ public static class LangPrintHelper
             TemplateParams = @struct.TemplateParams,
             Friends = @struct.Friends,
             Conditions = @struct.Conditions,
-        }
-        .WithComment(new List<string>() { @struct.FullName, sizeInfo });
+            Comments = @struct.Comments,
+        }.WithComment(new List<string>() { @struct.FullName, sizeInfo });
     }
 
     /// <summary>
@@ -184,7 +212,7 @@ public static class LangPrintHelper
 
     internal static T WithComment<T>(this T cppItem, List<string> comments) where T : CppItemBase
     {
-        cppItem.Comment = comments;
+        cppItem.Comments = comments;
         return cppItem;
     }
 
