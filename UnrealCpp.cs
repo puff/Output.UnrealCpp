@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using CG.Framework;
 using CG.Framework.Attributes;
 using CG.Framework.Engines;
 using CG.Framework.Engines.Models;
@@ -280,7 +279,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
                 body.Add("");
                 foreach (EngineParameter param in rOut)
                 {
-                    body.Add($"if ({param.Name} is not nullptr)");
+                    body.Add($"if ({param.Name} != nullptr)");
                     body.Add($"\t*{param.Name} = params.{param.Name};");
                 }
             }
@@ -439,6 +438,10 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
                 "class UObject"
             };
         }
+
+        cppModel.Defines = cppModel.Conditions
+            .Select(c => new CppDefine() { Name = c })
+            .ToList();
     }
 
     private void PrepareEngineFunction(EngineStruct parent, EngineFunction eFunc)
@@ -557,13 +560,17 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
     private IEnumerable<CppStruct> GetFuncParametersStructs(IEnginePackage enginePackage)
     {
         var ret = new List<CppStruct>();
-        foreach ((EngineClass @class, EngineFunction func) in enginePackage.Classes.SelectMany(@class => @class.Methods.Select(func => (@class, func))))
+        IEnumerable<(EngineClass, EngineFunction)> functions = enginePackage.Classes
+            .SelectMany(@class => @class.Methods.Select(func => (@class, func)))
+            .Where(classFunc => !classFunc.func.Static && !classFunc.func.Predefined);
+
+        foreach ((EngineClass @class, EngineFunction func) in functions)
         {
             var cppParamStruct = new CppStruct()
             {
                 Name = $"{@class.NameCpp}_{func.Name}_Params",
                 IsClass = false,
-                Comment = new() { func.FullName }
+                Comment = new List<string>() { func.FullName }
             };
 
             foreach (EngineParameter param in func.Parameters)
