@@ -524,7 +524,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         var ret = new List<CppStruct>();
         IEnumerable<(EngineClass, EngineFunction)> functions = enginePackage.Classes
             .SelectMany(@class => @class.Methods.Select(func => (@class, func)))
-            .Where(classFunc => !classFunc.func.Static && !classFunc.func.Predefined);
+            .Where(classFunc => !classFunc.func.Predefined);
 
         foreach ((EngineClass @class, EngineFunction func) in functions)
         {
