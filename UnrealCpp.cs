@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -67,72 +66,72 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
     public override string LangName => "Cpp";
     public override GameEngine SupportedEngines => GameEngine.UnrealEngine;
     public override LangProps SupportedProps => LangProps.Internal | LangProps.External;
-    public override ReadOnlyDictionary<Enum, LangOption> Options { get; } = new(new Dictionary<Enum, LangOption>()
+    public override IReadOnlyDictionary<Enum, LangOption> Options { get; } = new Dictionary<Enum, LangOption>()
+    {
         {
-            {
-                CppOptions.PrecompileSyntax,
-                new LangOption(
-                    "Precompile Syntax",
-                    LangOptionType.CheckBox,
-                    "Use precompile headers for most build speed",
-                    "true"
-                )
-            },
-            {
-                CppOptions.OffsetsOnly,
-                new LangOption(
-                    "Offsets Only",
-                    LangOptionType.CheckBox,
-                    "Only dump offsets in sdk",
-                    "false"
-                )
-            },
-            {
-                CppOptions.LazyFindObject,
-                new LangOption(
-                    "Lazy Find Object",
-                    LangOptionType.CheckBox,
-                    "Lazy assign for UObject::FindObject in SDK methods body",
-                    "true"
-                )
-            },
-            {
-                CppOptions.GenerateParametersFile,
-                new LangOption(
-                    "Generate Parameters File",
-                    LangOptionType.CheckBox,
-                    "Should generate function parameters file",
-                    "true"
-                )
-            },
-            {
-                CppOptions.ShouldUseStrings,
-                new LangOption(
-                    "Should Use Strings",
-                    LangOptionType.CheckBox,
-                    "Use string to catch function instead if use it's object index",
-                    "true"
-                )
-            },
-            {
-                CppOptions.ShouldXorStrings,
-                new LangOption(
-                    "Should Xor Strings",
-                    LangOptionType.CheckBox,
-                    "Use XOR string to handle functions name",
-                    "false"
-                )
-            },
-            {
-                CppOptions.XorFuncName,
-                new LangOption(
-                    "Xor Func Name",
-                    LangOptionType.TextBox,
-                    "XOR function name",
-                    "_xor_"
-                )
-            },
-        });
+            CppOptions.PrecompileSyntax,
+            new LangOption(
+                "Precompile Syntax",
+                LangOptionType.CheckBox,
+                "Use precompile headers for most build speed",
+                "true"
+            )
+        },
+        {
+            CppOptions.OffsetsOnly,
+            new LangOption(
+                "Offsets Only",
+                LangOptionType.CheckBox,
+                "Only dump offsets in sdk",
+                "false"
+            )
+        },
+        {
+            CppOptions.LazyFindObject,
+            new LangOption(
+                "Lazy Find Object",
+                LangOptionType.CheckBox,
+                "Lazy assign for UObject::FindObject in SDK methods body",
+                "true"
+            )
+        },
+        {
+            CppOptions.GenerateParametersFile,
+            new LangOption(
+                "Generate Parameters File",
+                LangOptionType.CheckBox,
+                "Should generate function parameters file",
+                "true"
+            )
+        },
+        {
+            CppOptions.ShouldUseStrings,
+            new LangOption(
+                "Should Use Strings",
+                LangOptionType.CheckBox,
+                "Use string to catch function instead if use it's object index",
+                "true"
+            )
+        },
+        {
+            CppOptions.ShouldXorStrings,
+            new LangOption(
+                "Should Xor Strings",
+                LangOptionType.CheckBox,
+                "Use XOR string to handle functions name",
+                "false"
+            )
+        },
+        {
+            CppOptions.XorFuncName,
+            new LangOption(
+                "Xor Func Name",
+                LangOptionType.TextBox,
+                "XOR function name",
+                "_xor_"
+            )
+        },
+    };
 
     private static string MakeValidName(string name)
     {
@@ -802,11 +801,14 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             foreach ((string fName, string fContent) in await GeneratePackageFilesAsync(pack).ConfigureAwait(false))
                 ret.Add(fName, fContent);
 
-            await Status.ProgressbarStatus.Invoke(
-                packCount,
-                SdkFile.Packages.Count - packCount,
-                CGUtils.GetPercentage(packCount, SdkFile.Packages.Count, 100)
-            ).ConfigureAwait(false);
+            if (Status?.ProgressbarStatus is not null)
+            {
+                await Status.ProgressbarStatus.Invoke(
+                    packCount,
+                    SdkFile.Packages.Count - packCount,
+                    CGUtils.GetPercentage(packCount, SdkFile.Packages.Count, 100)
+                ).ConfigureAwait(false);
+            }
 
             packCount++;
         }
@@ -814,7 +816,8 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         // Missed structs
         if (SdkFile.MissedStructs.Count > 0)
         {
-            await Status.TextStatus.Invoke("Generating missed structs").ConfigureAwait(false);
+            if (Status?.TextStatus is not null)
+                await Status.TextStatus.Invoke("Generating missed structs").ConfigureAwait(false);
 
             (string fName, string fContent) = GenerateMissing();
             ret.Add(Path.Combine("SDK", fName), fContent);
@@ -825,7 +828,9 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         builder.Append(Environment.NewLine);
 
         // Package sorter
-        await Status.TextStatus.Invoke("Sort packages depend on dependencies").ConfigureAwait(false);
+        if (Status?.TextStatus is not null)
+            await Status.TextStatus.Invoke("Sort packages depend on dependencies").ConfigureAwait(false);
+
         PackageSorterResult<IEnginePackage> sortResult = PackageSorter.Sort(SdkFile.Packages);
         if (sortResult.CycleList.Count > 0)
         {
