@@ -559,9 +559,9 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
     {
         var sb = new StringBuilder();
         var pragmas = new List<string>()
-            {
-                "once"
-            };
+        {
+            "once"
+        };
         var includes = new List<string>();
 
         if (Options[CppOptions.PrecompileSyntax].Value != "true")
@@ -648,6 +648,9 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             Structs = structs,
             Conditions = enginePackage.Conditions
         };
+
+        if (Options[CppOptions.PrecompileSyntax].Value == "true")
+            cppModel.CppIncludes.Add("\"../pch.h\"");
 
         PreparePackageModel(cppModel, enginePackage);
 
@@ -854,6 +857,16 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             builder.AppendLine($"#include \"SDK/{package.Name}_Package.h\"");
 
         ret.Add("SDK.h", builder.ToString());
+        return ret;
+    }
+
+    // Todo: this not the way to fix it but, i'm lazy so fix that leater :)
+    public override string ToLangType(string varType)
+    {
+        string ret = base.ToLangType(varType);
+        ret = ret.Replace("uint8_t_t_t", "uint8_t");
+        ret = ret.Replace("uint16_t_t", "uint16_t");
+
         return ret;
     }
 }
