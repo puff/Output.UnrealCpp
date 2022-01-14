@@ -584,6 +584,16 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         ArgumentNullException.ThrowIfNull(SdkFile);
 
         _cppProcessor = new CppProcessor();
+        var cppOpts = new CppLangOptions()
+        {
+            NewLine = NewLineType.CRLF,
+            PrintSectionName = true,
+            InlineCommentPadSize = 56,
+            VariableMemberTypePadSize = 60,
+            GeneratePackageSyntax = true,
+            AddPackageHeaderToCppFile = false
+        };
+        _cppProcessor.Init(cppOpts);
 
         SavedClasses.Clear();
         SavedStructs.Clear();
@@ -600,16 +610,6 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             foreach (EngineClass @class in pack.Classes)
                 AddPredefinedMethodsToClass(@class);
         }
-
-        var cppOpts = new CppLangOptions()
-        {
-            NewLine = NewLineType.CRLF,
-            PrintSectionName = true,
-            InlineCommentPadSize = 56,
-            VariableMemberTypePadSize = 60,
-            GeneratePackageSyntax = true
-        };
-        _cppProcessor.Init(cppOpts);
 
         return ValueTask.CompletedTask;
     }
@@ -651,6 +651,8 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
 
         if (Options[CppOptions.PrecompileSyntax].Value == "true")
             cppModel.CppIncludes.Add("\"../pch.h\"");
+        else
+            cppModel.CppIncludes.Add("\"../SDK.h\"");
 
         PreparePackageModel(cppModel, enginePackage);
 
