@@ -622,7 +622,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
     private ValueTask<Dictionary<string, string>> GeneratePackageFilesAsync(IEnginePackage enginePackage)
     {
 #if DEBUG
-        //if (enginePackage.Name != "CoreUObject") // BasicTypes
+        //if (enginePackage.Name != "InstancesHelper"/* && enginePackage.Name != "BasicTypes"*/) // BasicTypes
         //    return ValueTask.FromResult(new Dictionary<string, string>());
 #endif
 
