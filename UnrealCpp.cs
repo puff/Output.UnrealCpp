@@ -65,7 +65,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
 
     public override string LangName => "Cpp";
     public override GameEngine SupportedEngines => GameEngine.UnrealEngine;
-    public override LangProps SupportedProps => LangProps.Internal | LangProps.External;
+    public override LangProps SupportedProps => LangProps.Internal/* | LangProps.External*/;
     public override IReadOnlyDictionary<Enum, LangOption> Options { get; } = new Dictionary<Enum, LangOption>()
     {
         {
@@ -410,18 +410,18 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         };
     }
 
-    private void PreparePackageModel(CppModel cppModel, IEnginePackage enginePackage)
+    private void PreparePackageModel(CppPackageModel cppPackage, IEnginePackage enginePackage)
     {
         // # Conditions
         if (Options[CppOptions.OffsetsOnly].Value == "true")
-            cppModel.Conditions.Add(nameof(CppOptions.OffsetsOnly));
+            cppPackage.Conditions.Add(nameof(CppOptions.OffsetsOnly));
 
         if (enginePackage.IsPredefined && enginePackage.Name == "BasicTypes")
         {
-            //cppModel.Pragmas.Add("warning(disable: 4267)");
+            //cppPackage.Pragmas.Add("warning(disable: 4267)");
             // # conditions
             //if (processProps == LangProps.External)
-            //    cppModel.Conditions.Add("EXTERNAL_PROPS");
+            //    cppPackage.Conditions.Add("EXTERNAL_PROPS");
             //fileStr.Replace("/*!!POINTER_SIZE!!*/", sdkFile.Is64BitGame ? "0x08" : "0x04");
             //fileStr.Replace("/*!!FText_SIZE!!*/", $"0x{Lang.EngineConfig.GetStruct("FText").Size:X}");
             //// Set FUObjectItem_MEMBERS
@@ -432,12 +432,12 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             //}
 
             // # Forwards
-            cppModel.Forwards = new List<string>()
+            cppPackage.Forwards = new List<string>()
             {
                 "class UObject"
             };
 
-            CppFunction initFunc = cppModel.Functions.Find(cf => cf.Name == "InitSdk" && cf.Params.Count == 0);
+            CppFunction initFunc = cppPackage.Functions.Find(cf => cf.Name == "InitSdk" && cf.Params.Count == 0);
             if (initFunc is not null)
             {
                 for (var i = 0; i < initFunc.Body.Count; i++)
@@ -555,7 +555,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         return ret;
     }
 
-    private string MakeFuncParametersFile(CppModel model, IEnumerable<CppStruct> paramStructs)
+    private string MakeFuncParametersFile(CppPackageModel package, IEnumerable<CppStruct> paramStructs)
     {
         var sb = new StringBuilder();
         var pragmas = new List<string>()
@@ -568,13 +568,13 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             includes.Add("\"../SDK.h\"");
 
         // File header
-        sb.Append(_cppProcessor.GetFileHeader(model.HeadingComment, model.NameSpace, pragmas, includes, null, model.BeforeNameSpace, out int indentLvl));
+        sb.Append(_cppProcessor.GetFileHeader(package.HeadingComment, package.NameSpace, pragmas, includes, null, package.BeforeNameSpace, out int indentLvl));
 
         // Structs
         sb.Append(_cppProcessor.GenerateStructs(paramStructs, indentLvl, null));
 
         // File footer
-        sb.Append(_cppProcessor.GetFileFooter(model.NameSpace, model.AfterNameSpace, ref indentLvl));
+        sb.Append(_cppProcessor.GetFileFooter(package.NameSpace, package.AfterNameSpace, ref indentLvl));
 
         return sb.ToString();
     }
@@ -622,18 +622,18 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
     private ValueTask<Dictionary<string, string>> GeneratePackageFilesAsync(IEnginePackage enginePackage)
     {
 #if DEBUG
-        //if (enginePackage.Name != "InstancesHelper"/* && enginePackage.Name != "BasicTypes"*/) // BasicTypes
+        //if (enginePackage.Name != "InstancesHelper" && enginePackage.Name != "BasicTypes" && enginePackage.Name != "CoreUObject") // BasicTypes
         //    return ValueTask.FromResult(new Dictionary<string, string>());
 #endif
 
         var ret = new Dictionary<string, string>();
 
-        // Make CppModel
+        // Make CppPackageModel
         List<CppStruct> structs = GetStructs(enginePackage).ToList();
         structs.AddRange(GetClasses(enginePackage));
 
-        // Make CppModel
-        var cppModel = new CppModel()
+        // Make CppPackageModel
+        var cppModel = new CppPackageModel()
         {
             Name = enginePackage.Name,
             BeforeNameSpace = $"#ifdef _MSC_VER{Environment.NewLine}\t#pragma pack(push, 0x{SdkFile.GlobalMemberAlignment:X2}){Environment.NewLine}#endif",
@@ -649,11 +649,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             Conditions = enginePackage.Conditions
         };
 
-        if (Options[CppOptions.PrecompileSyntax].Value == "true")
-            cppModel.CppIncludes.Add("\"../pch.h\"");
-        else
-            cppModel.CppIncludes.Add("\"../SDK.h\"");
-
+        cppModel.CppIncludes.Add(Options[CppOptions.PrecompileSyntax].Value == "true" ? "\"../pch.h\"" : "\"../SDK.h\"");
         PreparePackageModel(cppModel, enginePackage);
 
         // Parameters Files
