@@ -41,6 +41,8 @@ internal enum CppOptions
     XorFuncName,
 }
 
+// TODO: Fix UnitTests
+
 [PluginInfo("CorrM", "Unreal Cpp", "Add Cpp syntax support for UnrealEngine")]
 public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
 {
@@ -446,7 +448,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
                         .Replace("MODULE_NAME", SdkFile.GameModule)
                         .Replace("GOBJ_OFFSET", $"0x{SdkFile.GObjectsOffset:X6}")
                         .Replace("GNAME_OFFSET", $"0x{SdkFile.GNamesOffset:X6}")
-                        .Replace("GWORLD_OFFSET", $"0x{SdkFile.GNamesOffset:X6}");
+                        .Replace("GWORLD_OFFSET", $"0x{SdkFile.GWorldOffset:X6}");
                     initFunc.Body[i] = s;
                 }
             }
