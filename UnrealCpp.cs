@@ -65,6 +65,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
     internal List<EngineClass> SavedClasses { get; } = new();
     internal List<EngineStruct> SavedStructs { get; } = new();
 
+    public override Version FrameworkVersion => Version.Parse("3.0.0");
     public override string LangName => "Cpp";
     public override GameEngine SupportedEngines => GameEngine.UnrealEngine;
     public override LangProps SupportedProps => LangProps.Internal/* | LangProps.External*/;
