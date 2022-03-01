@@ -43,7 +43,7 @@ internal enum CppOptions
 
 // TODO: Fix UnitTests
 
-[PluginInfo("CorrM", "Unreal Cpp", "Add Cpp syntax support for UnrealEngine")]
+[PluginInfo("CorrM", "Unreal Cpp", "Add Cpp syntax support for UnrealEngine", "https://github.com/CheatGear", "https://github.com/CheatGear/Language.UnrealCpp")]
 public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
 {
     private CppProcessor _cppProcessor;
@@ -65,7 +65,8 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
     internal List<EngineClass> SavedClasses { get; } = new();
     internal List<EngineStruct> SavedStructs { get; } = new();
 
-    public override Version FrameworkVersion => Version.Parse("3.0.0");
+    public override Version TargetFrameworkVersion { get; } = new(3, 0, 0);
+    public override Version PluginVersion { get; } = new(3, 0, 0);
     public override string LangName => "Cpp";
     public override GameEngine SupportedEngines => GameEngine.UnrealEngine;
     public override LangProps SupportedProps => LangProps.Internal/* | LangProps.External*/;
