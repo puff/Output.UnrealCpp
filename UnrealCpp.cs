@@ -791,16 +791,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         builder.AppendLine("#include <cstdint>");
         builder.AppendLine("#include <Windows.h>");
 
-        // Includes
-        foreach ((string fName, string fContent) in await GenerateIncludesAsync(processProps).ConfigureAwait(false))
-        {
-            ret.Add(fName, fContent);
-
-            if (!fName.EndsWith(".cpp") && fName.ToLower() != "pch.h")
-                builder.AppendLine($"#include \"{fName.Replace("\\", "/")}\"");
-        }
-
-        // Packages generator
+        // Packages generator [ Should be first task ]
         int packCount = 0;
         foreach (IEnginePackage pack in SdkFile.Packages)
         {
@@ -817,6 +808,15 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             }
 
             packCount++;
+        }
+
+        // Includes
+        foreach ((string fName, string fContent) in await GenerateIncludesAsync(processProps).ConfigureAwait(false))
+        {
+            ret.Add(fName, fContent);
+
+            if (!fName.EndsWith(".cpp") && fName.ToLower() != "pch.h")
+                builder.AppendLine($"#include \"{fName.Replace("\\", "/")}\"");
         }
 
         // Missed structs
