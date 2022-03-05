@@ -67,6 +67,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
 
     public override Version TargetFrameworkVersion { get; } = new(3, 0, 0);
     public override Version PluginVersion { get; } = new(3, 0, 0);
+
     public override string LangName => "Cpp";
     public override GameEngine SupportedEngines => GameEngine.UnrealEngine;
     public override LangProps SupportedProps => LangProps.Internal/* | LangProps.External*/;
@@ -871,5 +872,9 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         ret = ret.Replace("uint16_t_t", "uint16_t");
 
         return ret;
+    }
+
+    public override void Dispose()
+    {
     }
 }
