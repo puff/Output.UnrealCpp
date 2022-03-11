@@ -415,7 +415,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         };
     }
 
-    private void PreparePackageModel(CppPackageModel cppPackage, IEnginePackage enginePackage)
+    private void PreparePackageModel(CppPackage cppPackage, IEnginePackage enginePackage)
     {
         // # Conditions
         if (Options[CppOptions.OffsetsOnly].Value == "true")
@@ -561,7 +561,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         return ret;
     }
 
-    private string MakeFuncParametersFile(CppPackageModel package, IEnumerable<CppStruct> paramStructs)
+    private string MakeFuncParametersFile(CppPackage package, IEnumerable<CppStruct> paramStructs)
     {
         var sb = new StringBuilder();
         var pragmas = new List<string>()
@@ -639,7 +639,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         structs.AddRange(GetClasses(enginePackage));
 
         // Make CppPackageModel
-        var cppModel = new CppPackageModel()
+        var cppModel = new CppPackage()
         {
             Name = enginePackage.Name,
             BeforeNameSpace = $"#ifdef _MSC_VER{Environment.NewLine}\t#pragma pack(push, 0x{SdkFile.GlobalMemberAlignment:X2}){Environment.NewLine}#endif",
