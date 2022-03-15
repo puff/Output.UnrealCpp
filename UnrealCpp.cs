@@ -378,7 +378,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         //    beforeDeleteStr.AppendLine($"\t{@class.Supers}::{beforeDeleteMethod.Name}();{Environment.NewLine}");
         //}
 
-        //foreach (EngineVariable member in @class.Variables)
+        //foreach (EngineVariable member in @class.Fields)
         //{
         //    // Is not static
         //    if ((member.Status & MemberStatus.Static) != 0)
@@ -545,14 +545,14 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
                 if (param.Name.StartsWith("UnknownData_") && param.Type == "unsigned char")
                     continue;
 
-                var cppVar = new CppVariable()
+                var cppVar = new CppField()
                 {
                     Type = param.Type,
                     Name = param.Name,
                     InlineComment = $"0x{param.Offset:X4}(0x{param.Size:X4}) {param.Comment} ({param.FlagsString})"
                 };
 
-                cppParamStruct.Variables.Add(cppVar);
+                cppParamStruct.Fields.Add(cppVar);
             }
 
             ret.Add(cppParamStruct);
@@ -741,7 +741,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
             if (es is null)
                 throw new Exception($"Can't find missing struct '{cppStruct.Name}'");
 
-            cppStruct.Variables.Add(new CppVariable()
+            cppStruct.Fields.Add(new CppField()
             {
                 Name = "UnknownData",
                 Type = "unsigned char",

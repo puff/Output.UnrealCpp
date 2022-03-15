@@ -61,11 +61,11 @@ public static class LangPrintHelper
     }
 
     /// <summary>
-    /// Convert <see cref="EngineVariable"/> to <see cref="CppVariable"/>
+    /// Convert <see cref="EngineField"/> to <see cref="CppField"/>
     /// </summary>
     /// <param name="variable">Variable to convert</param>
-    /// <returns>Converted <see cref="CppVariable"/></returns>
-    internal static CppVariable ToCpp(this EngineVariable variable)
+    /// <returns>Converted <see cref="CppField"/></returns>
+    internal static CppField ToCpp(this EngineField variable)
     {
         var inlineComment = new StringBuilder();
         inlineComment.Append($"0x{variable.Offset:X4}(0x{variable.Size:X4})");
@@ -76,7 +76,7 @@ public static class LangPrintHelper
         if (!string.IsNullOrEmpty(variable.FlagsString))
             inlineComment.Append($" {variable.FlagsString}");
 
-        return new CppVariable()
+        return new CppField()
         {
             Name = variable.Name,
             Type = variable.Type,
@@ -133,7 +133,7 @@ public static class LangPrintHelper
             comments = new List<string>()
             {
                 "Function:",
-                $"\t\tOffset -> 0x{func.NativeOffset:X8}",
+                $"\t\tRVA    -> 0x{func.RVA:X8}",
                 $"\t\tName   -> {func.FullName}",
                 $"\t\tFlags  -> ({func.FlagsString})",
             };
@@ -188,7 +188,7 @@ public static class LangPrintHelper
             Name = @struct.NameCpp,
             IsClass = false,
             Supers = @struct.Supers.Select(kv => kv.Value).ToList(),
-            Variables = @struct.Variables.Select(ev => ev.ToCpp()).ToList(),
+            Fields = @struct.Fields.Select(ev => ev.ToCpp()).ToList(),
             Methods = @struct.Methods.Select(em => em.ToCpp()).ToList(),
             TemplateParams = @struct.TemplateParams,
             Friends = @struct.Friends,

@@ -28,7 +28,7 @@ public class UnitTest : IncludeFile<UnrealCpp>
 		// {0}
 		TEST_METHOD({1})
 		{
-			// Variables
+			// Fields
 {2}
 			// Size
 			CHEAT_GEAR_CHECK_SIZE({3}, {4});
@@ -39,7 +39,7 @@ public class UnitTest : IncludeFile<UnrealCpp>
             return ss.Select(c =>
             {
                 string cheatGearClassName = $"{Lang.SdkFile.Namespace}::{c.NameCpp}";
-                string[] memberTests = c.Variables
+                string[] memberTests = c.Fields
                     .Where(m => !m.Static && !m.IsBitField)
                     .Select(m => $"\t\t\tCHEAT_GEAR_CHECK_OFFSET({{3}}, {m.Name.Split('[')[0].Split(':')[0].Trim()}, 0x{m.Offset:X4});")
                     .ToArray();
