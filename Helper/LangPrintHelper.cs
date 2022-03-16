@@ -5,7 +5,7 @@ using CG.Framework.Engines.Models;
 using CG.Framework.Helper;
 using LangPrint.Cpp;
 
-namespace CG.Language.Helper;
+namespace CG.Output.Helper;
 
 public static class LangPrintHelper
 {

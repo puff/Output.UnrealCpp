@@ -2,9 +2,9 @@
 using System.IO;
 using System.Threading.Tasks;
 using CG.Framework.Helper;
-using CG.Framework.Plugin.Language;
+using CG.Framework.Plugin.Output;
 
-namespace CG.Language.Files;
+namespace CG.Output.Files;
 
 public class MemManagerCpp : IncludeFile<UnrealCpp>
 {
@@ -13,10 +13,10 @@ public class MemManagerCpp : IncludeFile<UnrealCpp>
 
     public MemManagerCpp(UnrealCpp lang) : base(lang) { }
 
-    public override ValueTask<string> ProcessAsync(LangProps processProps)
+    public override ValueTask<string> ProcessAsync(OutputProps processProps)
     {
         if (Lang.SdkFile is null)
-            throw new InvalidOperationException("Invalid language target.");
+            throw new InvalidOperationException("Invalid output target.");
 
         // Read File
         return CGUtils.ReadEmbeddedFileAsync(Path.Combine("External", FileName), this.GetType().Assembly);

@@ -9,13 +9,13 @@ using CG.Framework.Engines;
 using CG.Framework.Engines.Models;
 using CG.Framework.Engines.UnrealEngine;
 using CG.Framework.Helper;
-using CG.Framework.Plugin.Language;
-using CG.Language.Files;
-using CG.Language.Helper;
+using CG.Framework.Plugin.Output;
+using CG.Output.Files;
+using CG.Output.Helper;
 using LangPrint;
 using LangPrint.Cpp;
 
-namespace CG.Language;
+namespace CG.Output;
 
 internal enum CppOptions
 {
@@ -43,8 +43,8 @@ internal enum CppOptions
 
 // TODO: Fix UnitTests
 
-[PluginInfo("CorrM", "Unreal Cpp", "Add Cpp syntax support for UnrealEngine", "https://github.com/CheatGear", "https://github.com/CheatGear/Language.UnrealCpp")]
-public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
+[PluginInfo("CorrM", "Unreal Cpp", "Add Cpp syntax support for UnrealEngine", "https://github.com/CheatGear", "https://github.com/CheatGear/Output.UnrealCpp")]
+public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 {
     private CppProcessor _cppProcessor;
 
@@ -70,68 +70,68 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
 
     public override string LangName => "Cpp";
     public override GameEngine SupportedEngines => GameEngine.UnrealEngine;
-    public override LangProps SupportedProps => LangProps.Internal/* | LangProps.External*/;
-    public override IReadOnlyDictionary<Enum, LangOption> Options { get; } = new Dictionary<Enum, LangOption>()
+    public override OutputProps SupportedProps => OutputProps.Internal/* | OutputProps.External*/;
+    public override IReadOnlyDictionary<Enum, OutputOption> Options { get; } = new Dictionary<Enum, OutputOption>()
     {
         {
             CppOptions.PrecompileSyntax,
-            new LangOption(
+            new OutputOption(
                 "Precompile Syntax",
-                LangOptionType.CheckBox,
+                OutputOptionType.CheckBox,
                 "Use precompile headers for most build speed",
                 "true"
             )
         },
         {
             CppOptions.OffsetsOnly,
-            new LangOption(
+            new OutputOption(
                 "Offsets Only",
-                LangOptionType.CheckBox,
+                OutputOptionType.CheckBox,
                 "Only dump offsets in sdk",
                 "false"
             )
         },
         {
             CppOptions.LazyFindObject,
-            new LangOption(
+            new OutputOption(
                 "Lazy Find Object",
-                LangOptionType.CheckBox,
+                OutputOptionType.CheckBox,
                 "Lazy assign for UObject::FindObject in SDK methods body",
                 "true"
             )
         },
         {
             CppOptions.GenerateParametersFile,
-            new LangOption(
+            new OutputOption(
                 "Generate Parameters File",
-                LangOptionType.CheckBox,
+                OutputOptionType.CheckBox,
                 "Should generate function parameters file",
                 "true"
             )
         },
         {
             CppOptions.ShouldUseStrings,
-            new LangOption(
+            new OutputOption(
                 "Should Use Strings",
-                LangOptionType.CheckBox,
+                OutputOptionType.CheckBox,
                 "Use string to catch function instead if use it's object index",
                 "true"
             )
         },
         {
             CppOptions.ShouldXorStrings,
-            new LangOption(
+            new OutputOption(
                 "Should Xor Strings",
-                LangOptionType.CheckBox,
+                OutputOptionType.CheckBox,
                 "Use XOR string to handle functions name",
                 "false"
             )
         },
         {
             CppOptions.XorFuncName,
-            new LangOption(
+            new OutputOption(
                 "Xor Func Name",
-                LangOptionType.TextBox,
+                OutputOptionType.TextBox,
                 "XOR function name",
                 "_xor_"
             )
@@ -305,7 +305,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
     private void AddPredefinedMethodsToStruct(EngineStruct es)
     {
         //    // AfterRead func
-        //    if (processProps == LangProps.External && Options[CppOptions.OffsetsOnly].Value == "false")
+        //    if (processProps == OutputProps.External && Options[CppOptions.OffsetsOnly].Value == "false")
         //        builder.AppendLine($"\t{BuildReadExternalMethod(c, true)}");
     }
 
@@ -425,7 +425,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         {
             //cppPackage.Pragmas.Add("warning(disable: 4267)");
             // # conditions
-            //if (processProps == LangProps.External)
+            //if (processProps == OutputProps.External)
             //    cppPackage.Conditions.Add("EXTERNAL_PROPS");
             //fileStr.Replace("/*!!POINTER_SIZE!!*/", sdkFile.Is64BitGame ? "0x08" : "0x04");
             //fileStr.Replace("/*!!FText_SIZE!!*/", $"0x{Lang.EngineConfig.GetStruct("FText").Size:X}");
@@ -687,14 +687,14 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
     /// Process local files that needed to be included
     /// </summary>
     /// <param name="processProps">Process props</param>
-    private async ValueTask<Dictionary<string, string>> GenerateIncludesAsync(LangProps processProps)
+    private async ValueTask<Dictionary<string, string>> GenerateIncludesAsync(OutputProps processProps)
     {
         var ret = new Dictionary<string, string>();
 
         // Init
         var unitTestCpp = new UnitTest(this);
 
-        if (processProps == LangProps.External)
+        if (processProps == OutputProps.External)
         {
             var mmHeader = new MemManagerHeader(this);
             var mmCpp = new MemManagerCpp(this);
@@ -770,7 +770,7 @@ public sealed class UnrealCpp : LanguagePlugin<UnrealSdkFile>
         return ("MISSING.h", "");
     }
 
-    public override async ValueTask<Dictionary<string, string>> GenerateFilesAsync(LangProps processProps)
+    public override async ValueTask<Dictionary<string, string>> GenerateFilesAsync(OutputProps processProps)
     {
         var ret = new Dictionary<string, string>();
         var builder = new MyStringBuilder();

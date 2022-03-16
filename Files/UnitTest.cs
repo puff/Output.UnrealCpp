@@ -5,9 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using CG.Framework.Engines.Models;
 using CG.Framework.Helper;
-using CG.Framework.Plugin.Language;
+using CG.Framework.Plugin.Output;
 
-namespace CG.Language.Files;
+namespace CG.Output.Files;
 
 public class UnitTest : IncludeFile<UnrealCpp>
 {
@@ -16,7 +16,7 @@ public class UnitTest : IncludeFile<UnrealCpp>
 
     public UnitTest(UnrealCpp lang) : base(lang) { }
 
-    public override async ValueTask<string> ProcessAsync(LangProps processProps)
+    public override async ValueTask<string> ProcessAsync(OutputProps processProps)
     {
         // Read File
         string fileStr = await CGUtils.ReadEmbeddedFileAsync(Path.Combine("Internal", FileName), this.GetType().Assembly).ConfigureAwait(false);
