@@ -68,7 +68,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
     public override Version TargetFrameworkVersion { get; } = new(3, 0, 0);
     public override Version PluginVersion { get; } = new(3, 0, 0);
 
-    public override string LangName => "Cpp";
+    public override string OutputName => "Cpp";
     public override GameEngine SupportedEngines => GameEngine.UnrealEngine;
     public override OutputProps SupportedProps => OutputProps.Internal/* | OutputProps.External*/;
     public override IReadOnlyDictionary<Enum, OutputOption> Options { get; } = new Dictionary<Enum, OutputOption>()
@@ -247,10 +247,10 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         {
             body.Add("auto flags = fn->FunctionFlags;");
 
-            if (function.Native)
+            if (function.IsNative)
                 body.Add($"fn->FunctionFlags |= 0x{UnrealFunctionFlags.UE4Native:X};");
 
-            if (function.Static && !SdkFile.ShouldConvertStaticMethods)
+            if (function.IsStatic && !SdkFile.ShouldConvertStaticMethods)
             {
                 string prefix;
                 if (Options[CppOptions.LazyFindObject].Value == "true")
@@ -317,14 +317,20 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
             {
                 FullName = $"PredefindFunction {ec.NameCpp}.StaticClass",
                 Name = "StaticClass",
-                ReturnType = "UClass*",
-                Static = true,
-                Predefined = true,
-                Const = false,
-                Inline = false,
-                Native = false,
-                Private = false,
-                FlagsString = "Predefined, Static"
+                IsStatic = true,
+                IsPredefined = true,
+                IsConst = false,
+                IsInline = false,
+                IsNative = false,
+                FlagsString = "Predefined, Static",
+                Parameters = new List<EngineParameter>()
+                {
+                    new()
+                    {
+                        ParamKind = FuncParameterKind.Return,
+                        Type = "UClass*"
+                    }
+                }
             };
 
             string prefix;
@@ -460,13 +466,13 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
     private void PrepareEngineFunction(EngineStruct parent, EngineFunction eFunc)
     {
-        if (!eFunc.Predefined)
+        if (!eFunc.IsPredefined)
             eFunc.Body = BuildMethodBody(parent, eFunc);
     }
 
     private void PrepareCppFunction(EngineFunction originalFunc, CppFunction cppFunc)
     {
-        if (SdkFile.ShouldConvertStaticMethods && originalFunc.Static && !originalFunc.Predefined)
+        if (SdkFile.ShouldConvertStaticMethods && originalFunc.IsStatic && !originalFunc.IsPredefined)
         {
             cppFunc.Name = $"STATIC_{cppFunc.Name}";
             cppFunc.Static = false;
@@ -529,7 +535,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         var ret = new List<CppStruct>();
         IEnumerable<(EngineClass, EngineFunction)> functions = enginePackage.Classes
             .SelectMany(@class => @class.Methods.Select(func => (@class, func)))
-            .Where(classFunc => !classFunc.func.Predefined);
+            .Where(classFunc => !classFunc.func.IsPredefined);
 
         foreach ((EngineClass @class, EngineFunction func) in functions)
         {
@@ -574,7 +580,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
             includes.Add("\"../SDK.h\"");
 
         // File header
-        sb.Append(_cppProcessor.GetFileHeader(package.HeadingComment, package.NameSpace, pragmas, includes, null, package.BeforeNameSpace, out int indentLvl));
+        sb.Append(_cppProcessor.GetFileHeader(package.HeadingComment, package.NameSpace, pragmas, includes, null, null, package.BeforeNameSpace, out int indentLvl));
 
         // Structs
         sb.Append(_cppProcessor.GenerateStructs(paramStructs, indentLvl, null));
@@ -750,7 +756,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         }
 
         var sb = new StringBuilder();
-        sb.Append(_cppProcessor.GetFileHeader(null, "CG", null, null, null, string.Empty, out int indetLvl));
+        sb.Append(_cppProcessor.GetFileHeader(null, "CG", null, null, null, null, string.Empty, out int indetLvl));
         sb.Append(_cppProcessor.GenerateStructs(SdkFile.MissedStructs.ConvertAll(ConvertStruct), indetLvl, null));
         sb.Append(_cppProcessor.GetFileFooter("CG", string.Empty, ref indetLvl));
 
