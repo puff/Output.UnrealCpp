@@ -83,13 +83,13 @@ public static class LangPrintHelper
             Value = variable.Value,
             ArrayDim = variable.ArrayDim,
             Bitfield = variable.Bitfield,
-            Private = variable.Private,
-            Static = variable.Static,
-            Const = variable.Const,
-            Constexpr = variable.Constexpr,
-            Friend = variable.Friend,
+            Private = variable.IsPrivate,
+            Static = variable.IsStatic,
+            Const = variable.IsConstexpr,
+            Constexpr = variable.IsConstexpr,
+            Friend = variable.IsFriend,
             Extern = false,
-            Union = variable.Union,
+            Union = variable.IsUnion,
             InlineComment = variable.Comment,
             Conditions = variable.Conditions,
             Comments = variable.Comments,
@@ -151,22 +151,22 @@ public static class LangPrintHelper
             }
         }
 
-        bool isStatic = func.Static;
-        if (func.Static && !func.Predefined && func.Name.StartsWith("STATIC_"))
+        bool isStatic = func.IsStatic;
+        if (func.IsStatic && !func.IsPredefined && func.Name.StartsWith("STATIC_"))
             isStatic = false;
 
         return new CppFunction()
         {
             Name = func.Name,
-            Type = func.ReturnType,
+            Type = func.Parameters.First(p => (p.ParamKind & FuncParameterKind.Return) != 0).Type,
             TemplateParams = func.TemplateParams,
             Params = @params.Select(ep => ep.ToCpp()).ToList(),
             Body = func.Body,
-            Private = func.Private,
+            Private = func.IsPrivate,
             Static = isStatic,
-            Const = func.Const,
-            Friend = func.Friend,
-            Inline = func.Inline,
+            Const = func.IsConst,
+            Friend = func.IsFriend,
+            Inline = func.IsInline,
             Conditions = func.Conditions,
             Comments = func.Comments,
         }.WithComment(comments);
