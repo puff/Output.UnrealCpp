@@ -548,6 +548,9 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
             foreach (EngineParameter param in func.Parameters)
             {
+                if ((param.ParamKind & FuncParameterKind.Return) != 0)
+                    continue;
+
                 if (param.Name.StartsWith("UnknownData_") && param.Type == "unsigned char")
                     continue;
 
