@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using CG.Framework.Attributes;
 using CG.Framework.Engines;
 using CG.Framework.Engines.Models;
-using CG.Framework.Engines.UnrealEngine;
+using CG.Framework.Engines.Unreal;
 using CG.Framework.Helper;
 using CG.Framework.Plugin.Output;
 using CG.Output.Files;
@@ -811,10 +811,9 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
             if (Status?.ProgressbarStatus is not null)
             {
                 await Status.ProgressbarStatus.Invoke(
+                    "",
                     packCount,
-                    SdkFile.Packages.Count - packCount,
-                    CGUtils.GetPercentage(packCount, SdkFile.Packages.Count, 100)
-                ).ConfigureAwait(false);
+                    SdkFile.Packages.Count - packCount).ConfigureAwait(false);
             }
 
             packCount++;
