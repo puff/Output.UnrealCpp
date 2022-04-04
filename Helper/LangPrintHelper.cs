@@ -34,7 +34,7 @@ public static class LangPrintHelper
     {
         return new CppEnum()
         {
-            Name = eEnum.Name,
+            Name = eEnum.NameCpp,
             Type = eEnum.Type,
             IsClass = true,
             Values = eEnum.Values.Select(kv => new CppNameValue() { Name = kv.Key, Value = kv.Value }).ToList(),

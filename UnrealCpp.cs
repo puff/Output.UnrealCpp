@@ -291,11 +291,14 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
         // Return Value
         {
-            List<EngineParameter> ret = function.Parameters.Where(item => item.ParamKind == FuncParameterKind.Return).ToList();
-            if (ret.Count > 0)
+            // New update use ReturnKind for function deceleration itself
+            // so, additional check needed to check if that is the UnrealEngine
+            // return parameter or function return type(No name)
+            EngineParameter? ret = function.Parameters.FirstOrDefault(item => item.ParamKind == FuncParameterKind.Return);
+            if (ret is not null && ret.Type != "void" && !ret.Name.IsEmpty())
             {
                 body.Add("");
-                body.Add($"return params.{ret[0].Name};");
+                body.Add($"return params.{ret.Name};");
             }
         }
 
@@ -548,7 +551,10 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
             foreach (EngineParameter param in func.Parameters)
             {
-                if ((param.ParamKind & FuncParameterKind.Return) != 0)
+                // New update use ReturnKind for function deceleration itself
+                // so, additional check needed to check if that is the UnrealEngine
+                // return parameter or function return type(No name)
+                if ((param.ParamKind & FuncParameterKind.Return) != 0 && (param.Type == "void" || param.Name.IsEmpty()))
                     continue;
 
                 if (param.Name.StartsWith("UnknownData_") && param.Type == "unsigned char")
@@ -638,6 +644,9 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
     {
 #if DEBUG
         //if (enginePackage.Name != "InstancesHelper" && enginePackage.Name != "BasicTypes" && enginePackage.Name != "CoreUObject") // BasicTypes
+        //    return ValueTask.FromResult(new Dictionary<string, string>());
+
+        //if (enginePackage.Name != "Engine") // BasicTypes
         //    return ValueTask.FromResult(new Dictionary<string, string>());
 #endif
 
