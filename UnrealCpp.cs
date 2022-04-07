@@ -10,12 +10,12 @@ using CG.Framework.Engines.Models;
 using CG.Framework.Engines.Unreal;
 using CG.Framework.Helper;
 using CG.Framework.Plugin.Output;
-using CG.Output.Files;
-using CG.Output.Helper;
+using CG.Output.UnrealCpp.Files;
+using CG.Output.UnrealCpp.Helper;
 using LangPrint;
 using LangPrint.Cpp;
 
-namespace CG.Output;
+namespace CG.Output.UnrealCpp;
 
 internal enum CppOptions
 {

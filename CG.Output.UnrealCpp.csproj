@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<AssemblyName>UnrealCpp</AssemblyName>
-		<RootNamespace>CG.Output</RootNamespace>
+		<RootNamespace>CG.Output.UnrealCpp</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

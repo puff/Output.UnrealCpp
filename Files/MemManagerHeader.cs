@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using CG.Framework.Helper;
 using CG.Framework.Plugin.Output;
 
-namespace CG.Output.Files;
+namespace CG.Output.UnrealCpp.Files;
 
 public class MemManagerHeader : IncludeFile<UnrealCpp>
 {

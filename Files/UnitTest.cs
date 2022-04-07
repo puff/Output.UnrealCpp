@@ -7,7 +7,7 @@ using CG.Framework.Engines.Models;
 using CG.Framework.Helper;
 using CG.Framework.Plugin.Output;
 
-namespace CG.Output.Files;
+namespace CG.Output.UnrealCpp.Files;
 
 public class UnitTest : IncludeFile<UnrealCpp>
 {
