@@ -69,7 +69,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
     public override Version PluginVersion { get; } = new(3, 0, 0);
 
     public override string OutputName => "Cpp";
-    public override GameEngine SupportedEngines => GameEngine.UnrealEngine;
+    public override EngineType SupportedEngines => EngineType.UnrealEngine;
     public override OutputProps SupportedProps => OutputProps.Internal/* | OutputProps.External*/;
     public override IReadOnlyDictionary<Enum, OutputOption> Options { get; } = new Dictionary<Enum, OutputOption>()
     {
@@ -673,7 +673,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
             Conditions = enginePackage.Conditions
         };
 
-        cppModel.CppIncludes.Add(Options[CppOptions.PrecompileSyntax].Value == "true" ? "\"../pch.h\"" : "\"../SDK.h\"");
+        cppModel.CppIncludes.Add(Options[CppOptions.PrecompileSyntax].Value == "true" ? "\"pch.h\"" : "\"../SDK.h\"");
         PreparePackageModel(cppModel, enginePackage);
 
         // Parameters Files
@@ -855,7 +855,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         if (Status?.TextStatus is not null)
             await Status.TextStatus.Invoke("Sort packages depend on dependencies").ConfigureAwait(false);
 
-        PackageSorterResult<IEnginePackage> sortResult = PackageSorter.Sort(SdkFile.Packages);
+        PackageSorterResult<IEnginePackage> sortResult = PackageSorter.Sort(SdkFile.Packages.Cast<IEnginePackage>().ToList());
         if (sortResult.CycleList.Count > 0)
         {
             builder.AppendLine("// # Dependency cycle headers");
