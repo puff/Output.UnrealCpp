@@ -50,7 +50,6 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
     protected override Dictionary<string, string> LangTypes { get; } = new()
     {
-        // SdkVarType       LangType
         { "int64", "int64_t" },
         { "int32", "int32_t" },
         { "int16", "int16_t" },
@@ -494,6 +493,9 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         if (eStruct is EngineClass)
             cppStruct.IsClass = true;
 
+        foreach (CppField cField in cppStruct.Fields)
+            cField.Type = ToLangType(cField.Type, true);
+
         foreach (CppFunction cppFunc in cppStruct.Methods)
         {
             cppFunc.Conditions.AddRange(GenerateMethodConditions());
@@ -812,7 +814,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
         // Packages generator [ Should be first task ]
         int packCount = 0;
-        foreach (IEnginePackage pack in SdkFile.Packages)
+        foreach (UnrealPackage pack in SdkFile.Packages)
         {
             foreach ((string fName, string fContent) in await GeneratePackageFilesAsync(pack).ConfigureAwait(false))
                 ret.Add(fName, fContent);
@@ -878,16 +880,6 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
             builder.AppendLine($"#include \"SDK/{package.Name}_Package.h\"");
 
         ret.Add("SDK.h", builder.ToString());
-        return ret;
-    }
-
-    // Todo: this not the way to fix it but, i'm lazy so fix that leater :)
-    public override string ToLangType(string varType)
-    {
-        string ret = base.ToLangType(varType);
-        ret = ret.Replace("uint8_t_t_t", "uint8_t");
-        ret = ret.Replace("uint16_t_t", "uint16_t");
-
         return ret;
     }
 
