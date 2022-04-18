@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using CG.Framework.Engines.Models;
 using CG.Framework.Helper;
+using LangPrint;
 using LangPrint.Cpp;
 
 namespace CG.Output.UnrealCpp.Helper;
@@ -37,7 +38,7 @@ public static class LangPrintHelper
             Name = eEnum.NameCpp,
             Type = eEnum.Type,
             IsClass = true,
-            Values = eEnum.Values.Select(kv => new CppNameValue() { Name = kv.Key, Value = kv.Value }).ToList(),
+            Values = eEnum.Values.Select(kv => new PackageNameValue() { Name = kv.Key, Value = kv.Value }).ToList(),
             Conditions = eEnum.Conditions,
             Comments = eEnum.Comments,
         }.WithComment(new List<string>() { eEnum.FullName });
@@ -210,19 +211,19 @@ public static class LangPrintHelper
         return ret;
     }
 
-    internal static T WithComment<T>(this T cppItem, List<string> comments) where T : CppItemBase
+    internal static T WithComment<T>(this T cppItem, List<string> comments) where T : PackageItemBase
     {
         cppItem.Comments = comments;
         return cppItem;
     }
 
-    internal static T WithInlineComment<T>(this T cppItem, string inlineComment) where T : CppItemBase
+    internal static T WithInlineComment<T>(this T cppItem, string inlineComment) where T : PackageItemBase
     {
         cppItem.InlineComment = inlineComment;
         return cppItem;
     }
 
-    internal static T WithCondition<T>(this T cppItem, List<string> conditions) where T : CppItemBase
+    internal static T WithCondition<T>(this T cppItem, List<string> conditions) where T : PackageItemBase
     {
         cppItem.Conditions = conditions;
         return cppItem;
