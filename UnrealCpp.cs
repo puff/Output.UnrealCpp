@@ -9,6 +9,7 @@ using CG.Framework.Engines;
 using CG.Framework.Engines.Models;
 using CG.Framework.Engines.Unreal;
 using CG.Framework.Helper;
+using CG.Framework.Helper.IO;
 using CG.Framework.Plugin.Output;
 using CG.Output.UnrealCpp.Files;
 using CG.Output.UnrealCpp.Helper;
@@ -790,9 +791,8 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         return ("MISSING.h", "");
     }
 
-    public override async ValueTask<Dictionary<string, string>> GenerateFilesAsync(OutputProps processProps)
+    public override async ValueTask StartAsync(string saveDirPath, OutputProps processProps)
     {
-        var ret = new Dictionary<string, string>();
         var builder = new MyStringBuilder();
 
         builder.AppendLine($"#pragma once{Environment.NewLine}");
@@ -817,7 +817,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         foreach (UnrealPackage pack in SdkFile.Packages)
         {
             foreach ((string fName, string fContent) in await GeneratePackageFilesAsync(pack).ConfigureAwait(false))
-                ret.Add(fName, fContent);
+                await FileManager.WriteAsync(saveDirPath, fName, fContent).ConfigureAwait(false);
 
             if (Status?.ProgressbarStatus is not null)
             {
@@ -833,7 +833,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         // Includes
         foreach ((string fName, string fContent) in await GenerateIncludesAsync(processProps).ConfigureAwait(false))
         {
-            ret.Add(fName, fContent);
+            await FileManager.WriteAsync(saveDirPath, fName, fContent).ConfigureAwait(false);
 
             if (!fName.EndsWith(".cpp") && fName.ToLower() != "pch.h")
                 builder.AppendLine($"#include \"{fName.Replace("\\", "/")}\"");
@@ -846,7 +846,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
                 await Status.TextStatus.Invoke("Generating missed structs").ConfigureAwait(false);
 
             (string fName, string fContent) = GenerateMissing();
-            ret.Add(Path.Combine("SDK", fName), fContent);
+            await FileManager.WriteAsync(Path.Combine(saveDirPath, "SDK"), fName, fContent).ConfigureAwait(false);
 
             builder.AppendLine($"#include \"SDK/{fName}\"");
         }
@@ -879,8 +879,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         foreach (IEnginePackage package in sortResult.SortedList.Where(p => !p.IsPredefined))
             builder.AppendLine($"#include \"SDK/{package.Name}_Package.h\"");
 
-        ret.Add("SDK.h", builder.ToString());
-        return ret;
+        await FileManager.WriteAsync(saveDirPath, "SDK.h", builder.ToString()).ConfigureAwait(false);
     }
 
     public override void Dispose()
