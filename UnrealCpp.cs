@@ -228,10 +228,10 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
                 body.Add("} params;");
             }
 
-            List<EngineParameter> retVal = function.Parameters.Where(item => item.ParamKind == FuncParameterKind.Default).ToList();
-            if (retVal.Count > 0)
+            List<EngineParameter> defaultParams = function.Parameters.Where(p => p.IsDefault).ToList();
+            if (defaultParams.Count > 0)
             {
-                foreach (EngineParameter param in retVal)
+                foreach (EngineParameter param in defaultParams)
                 {
                     // Not needed
                     if (param.Name.StartsWith("UnknownData_") && param.Type == "unsigned char")
@@ -277,7 +277,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
         // Out Parameters
         {
-            List<EngineParameter> rOut = function.Parameters.Where(item => item.ParamKind == FuncParameterKind.Out).ToList();
+            List<EngineParameter> rOut = function.Parameters.Where(p => p.IsOut).ToList();
             if (rOut.Count > 0)
             {
                 body.Add("");
@@ -294,7 +294,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
             // New update use ReturnKind for function deceleration itself
             // so, additional check needed to check if that is the UnrealEngine
             // return parameter or function return type(No name)
-            EngineParameter? ret = function.Parameters.FirstOrDefault(item => item.ParamKind == FuncParameterKind.Return);
+            EngineParameter? ret = function.Parameters.FirstOrDefault(p => p.IsReturn);
             if (ret is not null && ret.Type != "void" && !ret.Name.IsEmpty())
             {
                 body.Add("");
@@ -557,7 +557,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
                 // New update use ReturnKind for function deceleration itself
                 // so, additional check needed to check if that is the UnrealEngine
                 // return parameter or function return type(No name)
-                if ((param.ParamKind & FuncParameterKind.Return) != 0 && (param.Type == "void" || param.Name.IsEmpty()))
+                if (param.IsReturn && (param.Type == "void" || param.Name.IsEmpty()))
                     continue;
 
                 if (param.Name.StartsWith("UnknownData_") && param.Type == "unsigned char")

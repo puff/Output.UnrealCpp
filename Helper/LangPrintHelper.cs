@@ -100,16 +100,16 @@ public static class LangPrintHelper
     /// <summary>
     /// Convert <see cref="EngineParameter"/> to <see cref="CppParameter"/>
     /// </summary>
-    /// <param name="param">Parameter to convert</param>
+    /// <param name="p">Parameter to convert</param>
     /// <returns>Converted <see cref="CppParameter"/></returns>
-    internal static CppParameter ToCpp(this EngineParameter param)
+    internal static CppParameter ToCpp(this EngineParameter p)
     {
         return new CppParameter()
         {
-            Name = param.Name,
-            Type = (param.PassByReference ? "const " : "") + param.Type + (param.PassByReference ? "&" : (param.ParamKind == FuncParameterKind.Out ? "*" : "")),
-            Conditions = param.Conditions,
-            Comments = param.Comments,
+            Name = p.Name,
+            Type = (p.IsReference ? "const " : "") + p.Type + (p.IsReference ? "&" : (p.IsOut ? "*" : "")),
+            Conditions = p.Conditions,
+            Comments = p.Comments,
         };
     }
 
@@ -121,7 +121,7 @@ public static class LangPrintHelper
     internal static CppFunction ToCpp(this EngineFunction func)
     {
         List<EngineParameter> @params = func.Parameters
-            .Where(p => p.ParamKind != FuncParameterKind.Return && !(p.Name.StartsWith("UnknownData_") && p.Type == "unsigned char"))
+            .Where(p => !p.IsReturn && !(p.Name.StartsWith("UnknownData_") && p.Type == "unsigned char"))
             .ToList();
 
         List<string> comments;
@@ -159,7 +159,7 @@ public static class LangPrintHelper
         return new CppFunction()
         {
             Name = func.Name,
-            Type = func.Parameters.First(p => (p.ParamKind & FuncParameterKind.Return) != 0).Type,
+            Type = func.Parameters.First(p => p.IsReturn).Type,
             TemplateParams = func.TemplateParams,
             Params = @params.Select(ep => ep.ToCpp()).ToList(),
             Body = func.Body,
