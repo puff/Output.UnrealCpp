@@ -25,15 +25,15 @@ jobs:
           dest: UnrealCpp/UnitTestsProject.zip
 
       # Upload
-      - uses: actions/upload-artifact@v1
-        with:
-          name: GameProject
-          path: ${{ github.workspace }}/UnrealCpp/GameProject.zip
+      #- uses: actions/upload-artifact@v1
+      #  with:
+      #    name: GameProject
+      #    path: ${{ github.workspace }}/UnrealCpp/GameProject.zip
 
-      - uses: actions/upload-artifact@v1
-        with:
-          name: TestsProject
-          path: ${{ github.workspace }}/UnrealCpp/UnitTestsProject.zip
+      #- uses: actions/upload-artifact@v1
+      #  with:
+      #    name: TestsProject
+      #    path: ${{ github.workspace }}/UnrealCpp/UnitTestsProject.zip
 
       # Commit
       - uses: EndBug/add-and-commit@v9
