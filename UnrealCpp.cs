@@ -805,6 +805,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
     /// </returns>
     private async ValueTask<(string GameDir, string TestsDir)> GenerateSolution(string saveDirPath)
     {
+        // {{CG_GAME_NAME}}, {{CG_GAME_NAME_UPPER}}
         string gameProjName = $"{SdkFile.GameName}";
         string gameProjPath = Path.Combine(saveDirPath, gameProjName);
         string unitTestsName = $"{gameProjName}UnitTests";
@@ -861,7 +862,9 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
                 using (var sr = new StreamReader(vcxprojStream, leaveOpen: true))
                     vcxprojString = await sr.ReadToEndAsync().ConfigureAwait(false);
 
-                vcxprojString = vcxprojString.Replace("{{GAME_NAME}}", gameProjName);
+                vcxprojString = vcxprojString
+                    .Replace("{{CG_GAME_NAME}}", gameProjName)
+                    .Replace("{{CG_GAME_NAME_UPPER}}", gameProjName.ToUpper());
 
                 // Write from begin
                 vcxprojStream.Seek(0, SeekOrigin.Begin);
@@ -895,6 +898,23 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
             File.Move(Path.Combine(gameProjPath, "GameProject.vcxproj"), gameVcxprojPath);
             File.Move(Path.Combine(gameProjPath, "GameProject.vcxproj.filters"), gameVcxprojFiltersPath);
+
+            await using (FileStream vcxprojStream = File.Open(gameVcxprojPath, FileMode.Open, FileAccess.ReadWrite))
+            {
+                string vcxprojString;
+                using (var sr = new StreamReader(vcxprojStream, leaveOpen: true))
+                    vcxprojString = await sr.ReadToEndAsync().ConfigureAwait(false);
+
+                vcxprojString = vcxprojString
+                    .Replace("{{CG_GAME_NAME}}", gameProjName)
+                    .Replace("{{CG_GAME_NAME_UPPER}}", gameProjName.ToUpper());
+
+                // Write from begin
+                vcxprojStream.Seek(0, SeekOrigin.Begin);
+                vcxprojStream.SetLength(vcxprojString.Length);
+                await using (var sr = new StreamWriter(vcxprojStream, leaveOpen: true))
+                    await sr.WriteAsync(vcxprojString).ConfigureAwait(false);
+            }
         }
 
         return (gameProjPath, unitTestsPath);

@@ -22,7 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{050882CE-76DC-40E8-917C-6EB6C2F6B79D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>UftCppUnitTests</RootNamespace>
+    <RootNamespace>{{CG_GAME_NAME}}UnitTests</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectSubType>NativeUnitTestProject</ProjectSubType>
   </PropertyGroup>
