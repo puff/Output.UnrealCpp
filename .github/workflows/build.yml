@@ -17,12 +17,12 @@ jobs:
       - uses: papeloto/action-zip@v1
         with:
           files: UnrealCpp/GameProject/
-          dest: GameProject.zip
+          dest: UnrealCpp/GameProject.zip
 
       - uses: papeloto/action-zip@v1
         with:
           files: UnrealCpp/UnitTestsProject/
-          dest: UnitTestsProject.zip
+          dest: UnrealCpp/UnitTestsProject.zip
 
       # Upload
       - uses: actions/upload-artifact@v1
