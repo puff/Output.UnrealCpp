@@ -7,6 +7,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="SlnHelper\**" />
+	  <EmbeddedResource Remove="SlnHelper\**" />
+	  <None Remove="SlnHelper\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Remove=".gitignore" />
 		<None Remove="LICENSE" />
 		<None Remove="README.md" />

@@ -11,15 +11,21 @@ namespace CG.Output.UnrealCpp.Files;
 
 public class UnitTest : IncludeFile<UnrealCpp>
 {
-    public override string FileName => "UnitTest.cpp";
-    public override bool IncludeInMainSdkFile { get; } = false;
+    private readonly UnrealCpp _lang;
 
-    public UnitTest(UnrealCpp lang) : base(lang) { }
+    public override string FileName => "UnitTest.cpp";
+    public override bool IncludeInMainSdkFile => false;
+
+    public UnitTest(UnrealCpp lang) : base(lang)
+    {
+        _lang = lang;
+    }
 
     public override async ValueTask<string> ProcessAsync(OutputProps processProps)
     {
         // Read File
         string fileStr = await CGUtils.ReadEmbeddedFileAsync(Path.Combine("Internal", FileName), this.GetType().Assembly).ConfigureAwait(false);
+        fileStr = fileStr.Replace("{{CG_GAME_NAME}}", _lang.SdkFile.GameName);
 
         // CLASSES_ASSERT
         const string unitTemplate = @"

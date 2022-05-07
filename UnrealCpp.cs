@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -62,11 +63,11 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         { "uint8", "uint8_t" }
     };
 
-    internal List<EngineClass> SavedClasses { get; } = new();
-    internal List<EngineStruct> SavedStructs { get; } = new();
+    internal List<EngineClass> SavedClasses { get; }
+    internal List<EngineStruct> SavedStructs { get; }
 
-    public override Version TargetFrameworkVersion { get; } = new(3, 0, 0);
-    public override Version PluginVersion { get; } = new(3, 0, 0);
+    public override Version TargetFrameworkVersion { get; }
+    public override Version PluginVersion { get; }
 
     public override string OutputName => "Cpp";
     public override EngineType SupportedEngines => EngineType.UnrealEngine;
@@ -137,6 +138,14 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
             )
         },
     };
+
+    public UnrealCpp()
+    {
+        SavedClasses = new List<EngineClass>();
+        SavedStructs = new List<EngineStruct>(); 
+        TargetFrameworkVersion = new Version(3, 0, 0);
+        PluginVersion = new Version(3, 0, 0);
+    }
 
     private static string MakeValidName(string name)
     {
@@ -643,8 +652,10 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
     /// </summary>
     /// <param name="enginePackage">Package to generate files for</param>
     /// <returns>File name and its content</returns>
-    private ValueTask<Dictionary<string, string>> GeneratePackageFilesAsync(IEnginePackage enginePackage)
+    private async ValueTask<Dictionary<string, string>> GeneratePackageFilesAsync(IEnginePackage enginePackage)
     {
+        await ValueTask.CompletedTask.ConfigureAwait(false);
+
 #if DEBUG
         //if (enginePackage.Name != "InstancesHelper" && enginePackage.Name != "BasicTypes" && enginePackage.Name != "CoreUObject") // BasicTypes
         //    return ValueTask.FromResult(new Dictionary<string, string>());
@@ -698,10 +709,13 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
             ret.Add(fName, fContent);
 
         // Useful for unit tests
-        SavedStructs.AddRange(structs.Where(cs => !cs.IsClass).SelectMany(cs => enginePackage.Structs.Where(ec => ec.NameCpp == cs.Name)));
-        SavedClasses.AddRange(structs.Where(cs => cs.IsClass).SelectMany(cs => enginePackage.Classes.Where(ec => ec.NameCpp == cs.Name)));
+        if (!enginePackage.IsPredefined)
+        {
+            SavedStructs.AddRange(structs.Where(cs => !cs.IsClass).SelectMany(cs => enginePackage.Structs.Where(ec => ec.NameCpp == cs.Name)));
+            SavedClasses.AddRange(structs.Where(cs => cs.IsClass).SelectMany(cs => enginePackage.Classes.Where(ec => ec.NameCpp == cs.Name)));
+        }
 
-        return ValueTask.FromResult(ret);
+        return ret;
     }
 
     /// <summary>
@@ -711,9 +725,6 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
     private async ValueTask<Dictionary<string, string>> GenerateIncludesAsync(OutputProps processProps)
     {
         var ret = new Dictionary<string, string>();
-
-        // Init
-        var unitTestCpp = new UnitTest(this);
 
         if (processProps == OutputProps.External)
         {
@@ -726,12 +737,6 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
             ret.Add(mmHeader.FileName, await taskMmHeader.ConfigureAwait(false));
             ret.Add(mmCpp.FileName, await taskMmCpp.ConfigureAwait(false));
         }
-
-        // Process
-        ValueTask<string> taskUnitTestCpp = unitTestCpp.ProcessAsync(processProps);
-
-        // Wait tasks
-        ret.Add(unitTestCpp.FileName, await taskUnitTestCpp.ConfigureAwait(false));
 
         // PchHeader
         if (Options[CppOptions.PrecompileSyntax].Value == "true")
@@ -771,9 +776,9 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         }
 
         var sb = new StringBuilder();
-        sb.Append(_cppProcessor.GetFileHeader(null, "CG", null, null, null, null, string.Empty, out int indetLvl));
-        sb.Append(_cppProcessor.GenerateStructs(SdkFile.MissedStructs.ConvertAll(ConvertStruct), indetLvl, null));
-        sb.Append(_cppProcessor.GetFileFooter("CG", string.Empty, ref indetLvl));
+        sb.Append(_cppProcessor.GetFileHeader(null, "CG", null, null, null, null, string.Empty, out int indentLvl));
+        sb.Append(_cppProcessor.GenerateStructs(SdkFile.MissedStructs.ConvertAll(ConvertStruct), indentLvl, null));
+        sb.Append(_cppProcessor.GetFileFooter("CG", string.Empty, ref indentLvl));
 
         //var builder = new Dictionary<string, string>();
         //builder.Append(GetFileHeader(true));
@@ -791,8 +796,130 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         return ("MISSING.h", "");
     }
 
-    public override async ValueTask StartAsync(string saveDirPath, OutputProps processProps)
+    /// <summary>
+    /// Generate solution with c++ game project and UnitTests for game project
+    /// </summary>
+    /// <param name="saveDirPath"></param>
+    /// <returns>
+    ///     Game project directory path, UnitTests directory folder path
+    /// </returns>
+    private async ValueTask<(string GameDir, string TestsDir)> GenerateSolution(string saveDirPath)
     {
+        string gameProjName = $"{SdkFile.GameName}";
+        string gameProjPath = Path.Combine(saveDirPath, gameProjName);
+        string unitTestsName = $"{gameProjName}UnitTests";
+        string unitTestsPath = Path.Combine(saveDirPath, unitTestsName);
+
+        // # Make sln file
+        var projects = new List<SlnProject>()
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = unitTestsName,
+                RelativePath = Path.Combine(unitTestsName, unitTestsName + ".vcxproj")
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = gameProjName,
+                RelativePath = Path.Combine(gameProjName, gameProjName + ".vcxproj")
+            }
+        };
+
+        string slnFile = new SlnBuilder().GenerateSlnFile(projects);
+        await FileManager.WriteAsync(saveDirPath, SdkFile.GameName + ".sln", slnFile).ConfigureAwait(false);
+
+        // UnitTests
+        {
+            // # Unzip UnitTests
+            const string unitTestsZipName = "UnitTests.zip";
+            await using (Stream embeddedUnitTests = CGUtils.GetEmbeddedFileAsync(unitTestsZipName, this.GetType().Assembly))
+            {
+                if (!Directory.Exists(unitTestsPath))
+                    Directory.CreateDirectory(unitTestsPath);
+
+                using var uZip = new ZipArchive(embeddedUnitTests);
+                uZip.ExtractToDirectory(unitTestsPath, true);
+            }
+
+            // # Rename UnitTests project game name
+            string testsVcxprojPath = Path.Combine(unitTestsPath, $"{gameProjName}UnitTests.vcxproj");
+            string testsVcxprojFiltersPath = Path.Combine(unitTestsPath, $"{gameProjName}UnitTests.vcxproj.filters");
+
+            if (File.Exists(testsVcxprojPath))
+                File.Delete(testsVcxprojPath);
+            if (File.Exists(testsVcxprojFiltersPath))
+                File.Delete(testsVcxprojFiltersPath);
+
+            File.Move(Path.Combine(unitTestsPath, "UnitTestsProject.vcxproj"), testsVcxprojPath);
+            File.Move(Path.Combine(unitTestsPath, "UnitTestsProject.vcxproj.filters"), testsVcxprojFiltersPath);
+
+            await using (FileStream vcxprojStream = File.Open(testsVcxprojPath, FileMode.Open, FileAccess.ReadWrite))
+            {
+                string vcxprojString;
+                using (var sr = new StreamReader(vcxprojStream, leaveOpen: true))
+                    vcxprojString = await sr.ReadToEndAsync().ConfigureAwait(false);
+
+                vcxprojString = vcxprojString.Replace("{{GAME_NAME}}", gameProjName);
+
+                // Write from begin
+                vcxprojStream.Seek(0, SeekOrigin.Begin);
+                vcxprojStream.SetLength(vcxprojString.Length);
+                await using (var sr = new StreamWriter(vcxprojStream, leaveOpen: true))
+                    await sr.WriteAsync(vcxprojString).ConfigureAwait(false);
+            }
+        }
+
+        // Game project
+        {
+            // # Unzip game project
+            const string gameZipName = "GameProject.zip";
+            await using (Stream embeddedGameProj = CGUtils.GetEmbeddedFileAsync(gameZipName, this.GetType().Assembly))
+            {
+                if (!Directory.Exists(gameProjPath))
+                    Directory.CreateDirectory(gameProjPath);
+
+                using var uZip = new ZipArchive(embeddedGameProj);
+                uZip.ExtractToDirectory(gameProjPath, true);
+            }
+
+            // # Rename game project game name
+            string gameVcxprojPath = Path.Combine(gameProjPath, $"{gameProjName}.vcxproj");
+            string gameVcxprojFiltersPath = Path.Combine(gameProjPath, $"{gameProjName}.vcxproj.filters");
+
+            if (File.Exists(gameVcxprojPath))
+                File.Delete(gameVcxprojPath);
+            if (File.Exists(gameVcxprojFiltersPath))
+                File.Delete(gameVcxprojFiltersPath);
+
+            File.Move(Path.Combine(gameProjPath, "GameProject.vcxproj"), gameVcxprojPath);
+            File.Move(Path.Combine(gameProjPath, "GameProject.vcxproj.filters"), gameVcxprojFiltersPath);
+        }
+
+        return (gameProjPath, unitTestsPath);
+    }
+
+    private async ValueTask<string> GenerateSdkHeaderFile(string gameProjDir, OutputProps processProps)
+    {
+        // Packages generator [ Should be first task ]
+        int packCount = 0;
+        foreach (UnrealPackage pack in SdkFile.Packages)
+        {
+            foreach ((string fName, string fContent) in await GeneratePackageFilesAsync(pack).ConfigureAwait(false))
+                await FileManager.WriteAsync(gameProjDir, fName, fContent).ConfigureAwait(false);
+
+            if (Status?.ProgressbarStatus is not null)
+            {
+                await Status.ProgressbarStatus.Invoke(
+                    "",
+                    packCount,
+                    SdkFile.Packages.Count - packCount).ConfigureAwait(false);
+            }
+
+            packCount++;
+        }
+
         var builder = new MyStringBuilder();
 
         builder.AppendLine($"#pragma once{Environment.NewLine}");
@@ -812,28 +939,10 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         builder.AppendLine("#include <cstdint>");
         builder.AppendLine("#include <Windows.h>");
 
-        // Packages generator [ Should be first task ]
-        int packCount = 0;
-        foreach (UnrealPackage pack in SdkFile.Packages)
-        {
-            foreach ((string fName, string fContent) in await GeneratePackageFilesAsync(pack).ConfigureAwait(false))
-                await FileManager.WriteAsync(saveDirPath, fName, fContent).ConfigureAwait(false);
-
-            if (Status?.ProgressbarStatus is not null)
-            {
-                await Status.ProgressbarStatus.Invoke(
-                    "",
-                    packCount,
-                    SdkFile.Packages.Count - packCount).ConfigureAwait(false);
-            }
-
-            packCount++;
-        }
-
         // Includes
         foreach ((string fName, string fContent) in await GenerateIncludesAsync(processProps).ConfigureAwait(false))
         {
-            await FileManager.WriteAsync(saveDirPath, fName, fContent).ConfigureAwait(false);
+            await FileManager.WriteAsync(gameProjDir, fName, fContent).ConfigureAwait(false);
 
             if (!fName.EndsWith(".cpp") && fName.ToLower() != "pch.h")
                 builder.AppendLine($"#include \"{fName.Replace("\\", "/")}\"");
@@ -846,7 +955,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
                 await Status.TextStatus.Invoke("Generating missed structs").ConfigureAwait(false);
 
             (string fName, string fContent) = GenerateMissing();
-            await FileManager.WriteAsync(Path.Combine(saveDirPath, "SDK"), fName, fContent).ConfigureAwait(false);
+            await FileManager.WriteAsync(Path.Combine(gameProjDir, "SDK"), fName, fContent).ConfigureAwait(false);
 
             builder.AppendLine($"#include \"SDK/{fName}\"");
         }
@@ -879,7 +988,21 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         foreach (IEnginePackage package in sortResult.SortedList.Where(p => !p.IsPredefined))
             builder.AppendLine($"#include \"SDK/{package.Name}_Package.h\"");
 
-        await FileManager.WriteAsync(saveDirPath, "SDK.h", builder.ToString()).ConfigureAwait(false);
+        return builder.ToString();
+    }
+
+    public override async ValueTask StartAsync(string saveDirPath, OutputProps processProps)
+    {
+        (string gameDir, string testsDir) = await GenerateSolution(saveDirPath).ConfigureAwait(false);
+
+        // Sdk.h
+        string sdkHeader = await GenerateSdkHeaderFile(gameDir, processProps).ConfigureAwait(false);
+        await FileManager.WriteAsync(gameDir, "SDK.h", sdkHeader).ConfigureAwait(false);
+
+        // UnitTests file
+        var unitTestCpp = new UnitTest(this);
+        string testsStr = await unitTestCpp.ProcessAsync(processProps).ConfigureAwait(false);
+        await FileManager.WriteAsync(testsDir, unitTestCpp.FileName, testsStr).ConfigureAwait(false);
     }
 
     public override void Dispose()
