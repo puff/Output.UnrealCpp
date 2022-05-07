@@ -18,15 +18,19 @@
 		<None Remove="README.md" />
 		<None Remove="UnrealCpp\External\MemoryManager.cpp" />
 		<None Remove="UnrealCpp\External\MemoryManager.h" />
+		<None Remove="UnrealCpp\GameProject.zip" />
 		<None Remove="UnrealCpp\Internal\Pch.h" />
 		<None Remove="UnrealCpp\Internal\UnitTest.cpp" />
+		<None Remove="UnrealCpp\UnitTestsProject.zip" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<EmbeddedResource Include="UnrealCpp\External\MemoryManager.cpp" />
 		<EmbeddedResource Include="UnrealCpp\External\MemoryManager.h" />
+		<EmbeddedResource Include="UnrealCpp\GameProject.zip" />
 		<EmbeddedResource Include="UnrealCpp\Internal\pch.h" />
 		<EmbeddedResource Include="UnrealCpp\Internal\UnitTest.cpp" />
+		<EmbeddedResource Include="UnrealCpp\UnitTestsProject.zip" />
 	</ItemGroup>
 
 	<ItemGroup>
