@@ -833,7 +833,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         // UnitTests
         {
             // # Unzip UnitTests
-            const string unitTestsZipName = "UnitTests.zip";
+            const string unitTestsZipName = "UnitTestsProject.zip";
             await using (Stream embeddedUnitTests = CGUtils.GetEmbeddedFileAsync(unitTestsZipName, this.GetType().Assembly))
             {
                 if (!Directory.Exists(unitTestsPath))
