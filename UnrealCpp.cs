@@ -569,9 +569,6 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
                 if (param.IsReturn && (param.Type == "void" || param.Name.IsEmpty()))
                     continue;
 
-                if (param.Name.StartsWith("UnknownData_") && param.Type == "unsigned char")
-                    continue;
-
                 var cppVar = new CppField()
                 {
                     Type = param.Type,
