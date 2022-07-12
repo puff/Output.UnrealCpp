@@ -48,7 +48,7 @@ internal enum CppOptions
 [PluginInfo("CorrM", "Unreal Cpp", "Add Cpp syntax support for UnrealEngine", "https://github.com/CheatGear", "https://github.com/CheatGear/Output.UnrealCpp")]
 public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 {
-    private CppProcessor _cppProcessor;
+    private readonly CppProcessor _cppProcessor;
 
     protected override Dictionary<string, string> LangTypes { get; } = new()
     {
@@ -141,43 +141,92 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
     public UnrealCpp()
     {
+        _cppProcessor = new CppProcessor();
+
         SavedClasses = new List<EngineClass>();
         SavedStructs = new List<EngineStruct>(); 
         TargetFrameworkVersion = new Version(3, 0, 0);
         PluginVersion = new Version(3, 0, 0);
     }
 
-    private static string MakeValidName(string name)
+    private static List<string> GenerateMethodConditions()
     {
-        name = name.Replace(' ', '_')
-            .Replace('?', '_')
-            .Replace('+', '_')
-            .Replace('-', '_')
-            .Replace(':', '_')
-            .Replace('/', '_')
-            .Replace('^', '_')
-            .Replace('(', '_')
-            .Replace(')', '_')
-            .Replace('[', '_')
-            .Replace(']', '_')
-            .Replace('<', '_')
-            .Replace('>', '_')
-            .Replace('&', '_')
-            .Replace('.', '_')
-            .Replace('#', '_')
-            .Replace('\\', '_')
-            .Replace('"', '_')
-            .Replace('%', '_');
-
-        if (string.IsNullOrEmpty(name))
-            return name;
-
-        if (char.IsDigit(name[0]))
-            name = '_' + name;
-
-        return name;
+        return new List<string>()
+        {
+            $"!{nameof(CppOptions.OffsetsOnly)}"
+        };
     }
 
+    private IEnumerable<CppDefine> GetDefines(IEnginePackage enginePackage)
+    {
+        return enginePackage.Defines.Select(ec => ec.ToCpp());
+    }
+
+    private IEnumerable<CppConstant> GetConstants(IEnginePackage enginePackage)
+    {
+        return enginePackage.Constants.Select(ec => ec.ToCpp());
+    }
+
+    private IEnumerable<CppEnum> GetEnums(IEnginePackage enginePackage)
+    {
+        return enginePackage.Enums.Select(ee => ee.ToCpp());
+    }
+
+    private IEnumerable<CppFunction> GetFunctions(IEnginePackage enginePackage)
+    {
+        return enginePackage.Functions.Select(ef => ef.ToCpp());
+    }
+
+    private IEnumerable<CppStruct> GetStructs(IEnginePackage enginePackage)
+    {
+        return enginePackage.Structs.Select(ConvertStruct);
+    }
+
+    private IEnumerable<CppStruct> GetClasses(IEnginePackage enginePackage)
+    {
+        return enginePackage.Classes.Select(ConvertStruct);
+    }
+
+    private IEnumerable<CppStruct> GetFuncParametersStructs(IEnginePackage enginePackage)
+    {
+        var ret = new List<CppStruct>();
+        IEnumerable<(EngineClass, EngineFunction)> functions = enginePackage.Classes
+            .SelectMany(@class => @class.Methods.Select(func => (@class, func)))
+            .Where(classFunc => !classFunc.func.IsPredefined);
+
+        foreach ((EngineClass @class, EngineFunction func) in functions)
+        {
+            var cppParamStruct = new CppStruct()
+            {
+                Name = $"{@class.NameCpp}_{func.Name}_Params",
+                IsClass = false,
+                Comments = new List<string>() { func.FullName }
+            };
+
+            foreach (EngineParameter param in func.Parameters)
+            {
+                // New update use ReturnKind for function deceleration itself
+                // so, additional check needed to check if that is the UnrealEngine
+                // return parameter or function return type(No name)
+                if (param.IsReturn && (param.Type == "void" || param.Name.IsEmpty()))
+                    continue;
+
+                var cppVar = new CppField()
+                {
+                    Type = param.Type,
+                    Name = param.Name,
+                    InlineComment = $"0x{param.Offset:X4}(0x{param.Size:X4}) {param.Comment} ({param.FlagsString})"
+                };
+
+                cppParamStruct.Fields.Add(cppVar);
+            }
+
+            ret.Add(cppParamStruct);
+        }
+
+        return ret;
+    }
+    
     private List<string> BuildMethodBody(EngineStruct @class, EngineFunction function)
     {
         var body = new List<string>();
@@ -327,7 +376,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         {
             var staticClassFunc = new EngineFunction()
             {
-                FullName = $"PredefindFunction {ec.NameCpp}.StaticClass",
+                FullName = $"PredefinedFunction {ec.NameCpp}.StaticClass",
                 Name = "StaticClass",
                 IsStatic = true,
                 IsPredefined = true,
@@ -424,15 +473,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
         return string.Empty;
     }
-
-    private static List<string> GenerateMethodConditions()
-    {
-        return new List<string>()
-        {
-            $"!{nameof(CppOptions.OffsetsOnly)}"
-        };
-    }
-
+    
     private void PreparePackageModel(CppPackage cppPackage, IEnginePackage enginePackage)
     {
         // # Conditions
@@ -460,7 +501,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
                 "class UObject"
             };
 
-            CppFunction initFunc = cppPackage.Functions.Find(cf => cf.Name == "InitSdk" && cf.Params.Count == 0);
+            CppFunction? initFunc = cppPackage.Functions.Find(cf => cf.Name == "InitSdk" && cf.Params.Count == 0);
             if (initFunc is not null)
             {
                 for (var i = 0; i < initFunc.Body.Count; i++)
@@ -509,80 +550,10 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         foreach (CppFunction cppFunc in cppStruct.Methods)
         {
             cppFunc.Conditions.AddRange(GenerateMethodConditions());
-            PrepareCppFunction(eStruct.Methods.Find(m => m.Name == cppFunc.Name), cppFunc);
+            PrepareCppFunction(eStruct.Methods.Find(m => m.Name == cppFunc.Name)!, cppFunc);
         }
 
         return cppStruct;
-    }
-
-    private IEnumerable<CppDefine> GetDefines(IEnginePackage enginePackage)
-    {
-        return enginePackage.Defines.Select(ec => ec.ToCpp());
-    }
-
-    private IEnumerable<CppConstant> GetConstants(IEnginePackage enginePackage)
-    {
-        return enginePackage.Constants.Select(ec => ec.ToCpp());
-    }
-
-    private IEnumerable<CppEnum> GetEnums(IEnginePackage enginePackage)
-    {
-        return enginePackage.Enums.Select(ee => ee.ToCpp());
-    }
-
-    private IEnumerable<CppFunction> GetFunctions(IEnginePackage enginePackage)
-    {
-        return enginePackage.Functions.Select(ef => ef.ToCpp());
-    }
-
-    private IEnumerable<CppStruct> GetStructs(IEnginePackage enginePackage)
-    {
-        return enginePackage.Structs.Select(ConvertStruct);
-    }
-
-    private IEnumerable<CppStruct> GetClasses(IEnginePackage enginePackage)
-    {
-        return enginePackage.Classes.Select(ConvertStruct);
-    }
-
-    private IEnumerable<CppStruct> GetFuncParametersStructs(IEnginePackage enginePackage)
-    {
-        var ret = new List<CppStruct>();
-        IEnumerable<(EngineClass, EngineFunction)> functions = enginePackage.Classes
-            .SelectMany(@class => @class.Methods.Select(func => (@class, func)))
-            .Where(classFunc => !classFunc.func.IsPredefined);
-
-        foreach ((EngineClass @class, EngineFunction func) in functions)
-        {
-            var cppParamStruct = new CppStruct()
-            {
-                Name = $"{@class.NameCpp}_{func.Name}_Params",
-                IsClass = false,
-                Comments = new List<string>() { func.FullName }
-            };
-
-            foreach (EngineParameter param in func.Parameters)
-            {
-                // New update use ReturnKind for function deceleration itself
-                // so, additional check needed to check if that is the UnrealEngine
-                // return parameter or function return type(No name)
-                if (param.IsReturn && (param.Type == "void" || param.Name.IsEmpty()))
-                    continue;
-
-                var cppVar = new CppField()
-                {
-                    Type = param.Type,
-                    Name = param.Name,
-                    InlineComment = $"0x{param.Offset:X4}(0x{param.Size:X4}) {param.Comment} ({param.FlagsString})"
-                };
-
-                cppParamStruct.Fields.Add(cppVar);
-            }
-
-            ret.Add(cppParamStruct);
-        }
-
-        return ret;
     }
 
     private string MakeFuncParametersFile(CppPackage package, IEnumerable<CppStruct> paramStructs)
@@ -613,7 +584,6 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
     {
         ArgumentNullException.ThrowIfNull(SdkFile);
 
-        _cppProcessor = new CppProcessor();
         var cppOpts = new CppLangOptions()
         {
             NewLine = NewLineType.CRLF,
@@ -760,7 +730,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         List<CppStruct> structs = SdkFile.MissedStructs.ConvertAll(ConvertStruct);
         foreach (CppStruct cppStruct in structs)
         {
-            EngineStruct es = SdkFile.MissedStructs.Find(es => es.NameCpp == cppStruct.Name);
+            EngineStruct? es = SdkFile.MissedStructs.Find(es => es.NameCpp == cppStruct.Name);
             if (es is null)
                 throw new Exception($"Can't find missing struct '{cppStruct.Name}'");
 
@@ -1020,9 +990,5 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         var unitTestCpp = new UnitTest(this);
         string testsStr = await unitTestCpp.ProcessAsync(processProps).ConfigureAwait(false);
         await FileManager.WriteAsync(testsDir, unitTestCpp.FileName, testsStr).ConfigureAwait(false);
-    }
-
-    public override void Dispose()
-    {
     }
 }

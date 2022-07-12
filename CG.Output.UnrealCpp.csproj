@@ -4,6 +4,7 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<AssemblyName>UnrealCpp</AssemblyName>
 		<RootNamespace>CG.Output.UnrealCpp</RootNamespace>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<ItemGroup>
