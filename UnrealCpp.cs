@@ -43,8 +43,6 @@ internal enum CppOptions
     XorFuncName,
 }
 
-// TODO: Fix UnitTests
-
 [PluginInfo("CorrM", "Unreal Cpp", "Add Cpp syntax support for UnrealEngine", "https://github.com/CheatGear", "https://github.com/CheatGear/Output.UnrealCpp")]
 public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 {
@@ -157,37 +155,27 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         };
     }
 
-    private IEnumerable<CppDefine> GetDefines(IEnginePackage enginePackage)
+    private static IEnumerable<CppDefine> GetDefines(IEnginePackage enginePackage)
     {
         return enginePackage.Defines.Select(ec => ec.ToCpp());
     }
 
-    private IEnumerable<CppConstant> GetConstants(IEnginePackage enginePackage)
+    private static IEnumerable<CppConstant> GetConstants(IEnginePackage enginePackage)
     {
         return enginePackage.Constants.Select(ec => ec.ToCpp());
     }
 
-    private IEnumerable<CppEnum> GetEnums(IEnginePackage enginePackage)
+    private static IEnumerable<CppEnum> GetEnums(IEnginePackage enginePackage)
     {
         return enginePackage.Enums.Select(ee => ee.ToCpp());
     }
 
-    private IEnumerable<CppFunction> GetFunctions(IEnginePackage enginePackage)
+    private static IEnumerable<CppFunction> GetFunctions(IEnginePackage enginePackage)
     {
         return enginePackage.Functions.Select(ef => ef.ToCpp());
     }
 
-    private IEnumerable<CppStruct> GetStructs(IEnginePackage enginePackage)
-    {
-        return enginePackage.Structs.Select(ConvertStruct);
-    }
-
-    private IEnumerable<CppStruct> GetClasses(IEnginePackage enginePackage)
-    {
-        return enginePackage.Classes.Select(ConvertStruct);
-    }
-
-    private IEnumerable<CppStruct> GetFuncParametersStructs(IEnginePackage enginePackage)
+    private static IEnumerable<CppStruct> GetFuncParametersStructs(IEnginePackage enginePackage)
     {
         var ret = new List<CppStruct>();
         IEnumerable<(EngineClass, EngineFunction)> functions = enginePackage.Classes
@@ -225,6 +213,16 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         }
 
         return ret;
+    }
+    
+    private IEnumerable<CppStruct> GetStructs(IEnginePackage enginePackage)
+    {
+        return enginePackage.Structs.Select(ConvertStruct);
+    }
+
+    private IEnumerable<CppStruct> GetClasses(IEnginePackage enginePackage)
+    {
+        return enginePackage.Classes.Select(ConvertStruct);
     }
     
     private List<string> BuildMethodBody(EngineStruct @class, EngineFunction function)
@@ -579,41 +577,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
         return sb.ToString();
     }
-
-    protected override ValueTask OnInitAsync()
-    {
-        ArgumentNullException.ThrowIfNull(SdkFile);
-
-        var cppOpts = new CppLangOptions()
-        {
-            NewLine = NewLineType.CRLF,
-            PrintSectionName = true,
-            InlineCommentPadSize = 56,
-            VariableMemberTypePadSize = 60,
-            GeneratePackageSyntax = true,
-            AddPackageHeaderToCppFile = false
-        };
-        _cppProcessor.Init(cppOpts);
-
-        SavedClasses.Clear();
-        SavedStructs.Clear();
-
-        // Sort structs in packages
-        PackageSorter.SortStructsClassesInPackages(SdkFile.Packages);
-
-        // Add predefined methods
-        foreach (IEnginePackage pack in SdkFile.Packages.Where(p => !p.IsPredefined))
-        {
-            foreach (EngineStruct @struct in pack.Structs)
-                AddPredefinedMethodsToStruct(@struct);
-
-            foreach (EngineClass @class in pack.Classes)
-                AddPredefinedMethodsToClass(@class);
-        }
-
-        return ValueTask.CompletedTask;
-    }
-
+    
     /// <summary>
     /// Generate enginePackage files
     /// </summary>
@@ -978,6 +942,40 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         return builder.ToString();
     }
 
+    protected override ValueTask OnInitAsync()
+    {
+        ArgumentNullException.ThrowIfNull(SdkFile);
+
+        var cppOpts = new CppLangOptions()
+        {
+            NewLine = NewLineType.CRLF,
+            PrintSectionName = true,
+            InlineCommentPadSize = 56,
+            VariableMemberTypePadSize = 60,
+            GeneratePackageSyntax = true,
+            AddPackageHeaderToCppFile = false
+        };
+        _cppProcessor.Init(cppOpts);
+
+        SavedClasses.Clear();
+        SavedStructs.Clear();
+
+        // Sort structs in packages
+        PackageSorter.SortStructsClassesInPackages(SdkFile.Packages);
+
+        // Add predefined methods
+        foreach (IEnginePackage pack in SdkFile.Packages.Where(p => !p.IsPredefined))
+        {
+            foreach (EngineStruct @struct in pack.Structs)
+                AddPredefinedMethodsToStruct(@struct);
+
+            foreach (EngineClass @class in pack.Classes)
+                AddPredefinedMethodsToClass(@class);
+        }
+
+        return ValueTask.CompletedTask;
+    }
+    
     public override async ValueTask StartAsync(string saveDirPath, OutputProps processProps)
     {
         (string gameDir, string testsDir) = await GenerateSolution(saveDirPath).ConfigureAwait(false);
