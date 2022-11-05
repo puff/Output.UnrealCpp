@@ -181,8 +181,8 @@ public static class LangPrintHelper
     internal static CppStruct ToCpp(this EngineStruct @struct)
     {
         string sizeInfo = @struct.InheritedSize > 0
-                ? $"Size -> 0x{@struct.Size - @struct.InheritedSize:X4} (FullSize[0x{@struct.Size:X4}] - InheritedSize[0x{@struct.InheritedSize:X4}])"
-                : $"Size -> 0x{@struct.Size:X4}";
+            ? $"Size -> 0x{@struct.Size - @struct.InheritedSize:X4} (FullSize[0x{@struct.Size:X4}] - InheritedSize[0x{@struct.InheritedSize:X4}])"
+            : $"Size -> 0x{@struct.Size:X4}";
 
         return new CppStruct()
         {

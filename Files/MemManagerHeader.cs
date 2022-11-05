@@ -11,7 +11,9 @@ public class MemManagerHeader : IncludeFile<UnrealCpp>
     public override string FileName { get; } = "MemoryManager.h";
     public override bool IncludeInMainSdkFile { get; } = false;
 
-    public MemManagerHeader(UnrealCpp lang) : base(lang) { }
+    public MemManagerHeader(UnrealCpp lang) : base(lang)
+    {
+    }
 
     public override ValueTask<string> ProcessAsync(OutputProps processProps)
     {

@@ -7,9 +7,10 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace CheatGearCppUnitTests
 {
-	TEST_CLASS(CheatGear)
-	{
-	public:
-/*!!CLASSES_ASSERT!!*/
-	};
+    TEST_CLASS (CheatGear)
+    {
+        public
+        :
+        /*!!CLASSES_ASSERT!!*/
+    };
 }

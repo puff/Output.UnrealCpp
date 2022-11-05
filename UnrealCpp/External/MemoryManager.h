@@ -37,7 +37,7 @@ public:
     bool Init(const std::wstring& processName);
     uintptr_t GetExPointer(void* allocAddress);
 
-    template<typename T>
+    template <typename T>
     T Read(const uintptr_t address)
     {
         T ret{};
@@ -54,7 +54,7 @@ public:
     /// <typeparam name="T">Type to read</typeparam>
     /// <param name="address">Address of targeted memory</param>
     /// <returns>Instance of <typeparamref name="T"/></returns>
-    template<typename T>
+    template <typename T>
     T* ReadPtrFully(const uintptr_t address)
     {
         // nullptr ?!
@@ -109,7 +109,7 @@ public:
         return ret;
     }*/
 
-    template<typename T>
+    template <typename T>
     bool Write(const uintptr_t address, const T& value)
     {
         if (!address)
@@ -118,7 +118,7 @@ public:
         return WriteImp(address, reinterpret_cast<void*>(const_cast<T*>(&value)), sizeof(T));
     }
 
-    template<typename T>
+    template <typename T>
     void DeletePtr(T* allocPtr)
     {
         void* ptr = reinterpret_cast<void*>(allocPtr);

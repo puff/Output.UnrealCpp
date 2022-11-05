@@ -69,7 +69,8 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
     public override string OutputName => "Cpp";
     public override EngineType SupportedEngines => EngineType.UnrealEngine;
-    public override OutputProps SupportedProps => OutputProps.Internal/* | OutputProps.External*/;
+    public override OutputProps SupportedProps => OutputProps.Internal /* | OutputProps.External*/;
+
     public override IReadOnlyDictionary<Enum, OutputOption> Options { get; } = new Dictionary<Enum, OutputOption>()
     {
         {
@@ -142,7 +143,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         _cppProcessor = new CppProcessor();
 
         SavedClasses = new List<EngineClass>();
-        SavedStructs = new List<EngineStruct>(); 
+        SavedStructs = new List<EngineStruct>();
         TargetFrameworkVersion = new Version(3, 0, 0);
         PluginVersion = new Version(3, 0, 0);
     }
@@ -214,7 +215,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
         return ret;
     }
-    
+
     private IEnumerable<CppStruct> GetStructs(IEnginePackage enginePackage)
     {
         return enginePackage.Structs.Select(ConvertStruct);
@@ -224,7 +225,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
     {
         return enginePackage.Classes.Select(ConvertStruct);
     }
-    
+
     private List<string> BuildMethodBody(EngineStruct @class, EngineFunction function)
     {
         var body = new List<string>();
@@ -296,6 +297,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
                     body.Add($"params.{param.Name} = {param.Name};");
                 }
             }
+
             body.Add("");
         }
 
@@ -471,7 +473,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
         return string.Empty;
     }
-    
+
     private void PreparePackageModel(CppPackage cppPackage, IEnginePackage enginePackage)
     {
         // # Conditions
@@ -577,7 +579,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
         return sb.ToString();
     }
-    
+
     /// <summary>
     /// Generate enginePackage files
     /// </summary>
@@ -975,7 +977,7 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
         return ValueTask.CompletedTask;
     }
-    
+
     public override async ValueTask StartAsync(string saveDirPath, OutputProps processProps)
     {
         (string gameDir, string testsDir) = await GenerateSolution(saveDirPath).ConfigureAwait(false);
