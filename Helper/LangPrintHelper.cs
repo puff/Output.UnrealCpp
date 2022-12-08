@@ -23,6 +23,8 @@ public static class LangPrintHelper
             Value = define.Value,
             Conditions = define.Conditions,
             Comments = define.Comments,
+            BeforePrint = define.BeforePrint,
+            AfterPrint = define.AfterPrint,
         };
     }
 
@@ -41,6 +43,8 @@ public static class LangPrintHelper
             Values = eEnum.Values.Select(kv => new PackageNameValue() { Name = kv.Key, Value = kv.Value }).ToList(),
             Conditions = eEnum.Conditions,
             Comments = eEnum.Comments,
+            BeforePrint = eEnum.BeforePrint,
+            AfterPrint = eEnum.AfterPrint,
         }.WithComment(new List<string>() { eEnum.FullName });
     }
 
@@ -58,6 +62,8 @@ public static class LangPrintHelper
             Value = constant.Value,
             Conditions = constant.Conditions,
             Comments = constant.Comments,
+            BeforePrint = constant.BeforePrint,
+            AfterPrint = constant.AfterPrint,
         };
     }
 
@@ -94,6 +100,8 @@ public static class LangPrintHelper
             InlineComment = variable.Comment,
             Conditions = variable.Conditions,
             Comments = variable.Comments,
+            BeforePrint = variable.BeforePrint,
+            AfterPrint = variable.AfterPrint,
         }.WithInlineComment(inlineComment.ToString());
     }
 
@@ -110,6 +118,8 @@ public static class LangPrintHelper
             Type = (p.IsReference ? "const " : "") + p.Type + (p.IsReference ? "&" : (p.IsOut ? "*" : "")),
             Conditions = p.Conditions,
             Comments = p.Comments,
+            BeforePrint = p.BeforePrint,
+            AfterPrint = p.AfterPrint,
         };
     }
 
@@ -170,6 +180,8 @@ public static class LangPrintHelper
             Inline = func.IsInline,
             Conditions = func.Conditions,
             Comments = func.Comments,
+            BeforePrint = func.BeforePrint,
+            AfterPrint = func.AfterPrint,
         }.WithComment(comments);
     }
 
@@ -195,6 +207,8 @@ public static class LangPrintHelper
             Friends = @struct.Friends,
             Conditions = @struct.Conditions,
             Comments = @struct.Comments,
+            BeforePrint = @struct.BeforePrint,
+            AfterPrint = @struct.AfterPrint,
         }.WithComment(new List<string>() { @struct.FullName, sizeInfo });
     }
 
