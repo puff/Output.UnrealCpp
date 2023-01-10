@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -12,13 +13,14 @@ using CG.Framework.Engines.Unreal;
 using CG.Framework.Helper;
 using CG.Framework.Helper.IO;
 using CG.Framework.Plugin.Output;
+using CG.Language.Helper;
 using CG.Output.UnrealCpp.Files;
 using CG.Output.UnrealCpp.Helper;
 using LangPrint;
 using LangPrint.Cpp;
+using PackageSorter = CG.Language.Helper.PackageSorter;
 
 namespace CG.Output.UnrealCpp;
-
 internal enum CppOptions
 {
     None,
@@ -855,24 +857,6 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
 
     private async ValueTask<string> GenerateSdkHeaderFile(string gameProjDir, OutputProps processProps)
     {
-        // Packages generator [ Should be first task ]
-        int packCount = 0;
-        foreach (UnrealPackage pack in SdkFile.Packages)
-        {
-            foreach ((string fName, string fContent) in await GeneratePackageFilesAsync(pack).ConfigureAwait(false))
-                await FileManager.WriteAsync(gameProjDir, fName, fContent).ConfigureAwait(false);
-
-            if (Status?.ProgressbarStatus is not null)
-            {
-                await Status.ProgressbarStatus.Invoke(
-                    "",
-                    packCount,
-                    SdkFile.Packages.Count - packCount).ConfigureAwait(false);
-            }
-
-            packCount++;
-        }
-
         var builder = new MyStringBuilder();
 
         builder.AppendLine($"#pragma once{Environment.NewLine}");
@@ -919,26 +903,88 @@ public sealed class UnrealCpp : OutputPlugin<UnrealSdkFile>
         if (Status?.TextStatus is not null)
             await Status.TextStatus.Invoke("Sort packages depend on dependencies").ConfigureAwait(false);
 
-        PackageSorterResult<IEnginePackage> sortResult = PackageSorter.Sort(SdkFile.Packages.Cast<IEnginePackage>().ToList());
+        Language.Helper.PackageSorterResult<IEnginePackage> sortResult = PackageSorter.Sort(SdkFile.Packages.Cast<IEnginePackage>().ToList());
+        var s2Result = sortResult;
+        var s2ResultList = sortResult.GetFulList();
+
         if (sortResult.CycleList.Count > 0)
         {
-            builder.AppendLine("// # Dependency cycle headers");
-            builder.AppendLine($"// # (Sorted: {sortResult.SortedList.Count}, Cycle: {sortResult.CycleList.Count})\n");
-
-            foreach ((IEnginePackage package, IEnginePackage dependPackage) in sortResult.CycleList)
+            while (s2Result.CycleList.Count > 0)
             {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("!!! CYCLIC DEPENDENCIES DETECTED, RE-SORTING !!!");
+                //var cycListKeys = s2Result.CycleList.Keys.ToList();
+                //var cycListVals = s2Result.CycleList.Values.ToList();
+                //cycListKeys.ForEach(c =>
+                //{
+                //    c.Dependencies.Clear();
+                //    c.Classes.ForEach(x => x.Dependencies.Clear());
+                //});
+                //cycListVals.ForEach(c =>
+                //{
+                //    c.Dependencies.Clear();
+                //    c.Classes.ForEach(x => x.Dependencies.Clear());
+                //});
+                //s2ResultList = s2Result.SortedList.Concat(cycListKeys).Concat(cycListVals).ToList();
+                PackageSorter.SortStructsClassesInPackages(s2ResultList);
+
+                Console.WriteLine("!!! MOVING CYCLIC DEPENDENCIES !!!");
+                s2ResultList = s2Result.GetFulList();
+                s2Result = PackageSorter.Sort(s2ResultList);
+                break;
+            }
+
+            s2ResultList = s2Result.GetFulList();
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("!!! FINAL SORT DEPS !!!");
+            PackageSorter.SortStructsClassesInPackages(s2ResultList);
+            Console.WriteLine("!!! FINAL SORT !!!"); 
+            s2Result = PackageSorter.Sort(s2ResultList);
+            //Console.WriteLine("!!! FINAL SORT NEW DEPS !!!");
+            //PackageSorter.SortStructsClassesInPackages(s2ResultList); // may break or be redundant
+
+            builder.AppendLine("// # Dependency cycle headers");
+            builder.AppendLine($"// # (Sorted: {/*sortResult*/s2Result.SortedList.Count}, Cycle: {/*sortResult*/s2Result.CycleList.Count})\n");
+
+            foreach ((IEnginePackage package, IEnginePackage dependPackage) in /*sortResult*/s2Result.CycleList)
+            {
+                //foreach (var c in dependPackage.Classes)
+                //    foreach (var cd in c.Dependencies)
+                //        Console.WriteLine(package.Name + " <-> " + dependPackage.Name + " | " + c.Name + " | " + cd.Name + " | " + package.Classes.Any(x => x.Name == cd.Name) + " | " + package.Structs.Any(x => x.Name == cd.Name));
+
                 builder.AppendLine($"// {package.Name} <-> {dependPackage.Name}");
-                builder.AppendLine($"#include \"SDK/{package.Name}_Package.h\"");
+                builder.AppendLine($"// #include \"SDK/{package.Name}_Package.h\"");
             }
 
             builder.AppendLine();
             builder.AppendLine();
         }
 
-        foreach (IEnginePackage package in sortResult.SortedList.Where(p => p.IsPredefined))
+        // Packages generator [ Should be first task ] edit: hehe no it shouldn't! cyclic dependencies, wooOoOOo!
+        int packCount = 0;
+        // foreach (UnrealPackage pack in SdkFile.Packages)
+        foreach (var pack in /*sortResult*/s2Result.SortedList)
+        {
+            foreach ((string fName, string fContent) in await GeneratePackageFilesAsync(pack).ConfigureAwait(false))
+                await FileManager.WriteAsync(gameProjDir, fName, fContent).ConfigureAwait(false);
+
+            if (Status?.ProgressbarStatus is not null)
+            {
+                await Status.ProgressbarStatus.Invoke(
+                    "",
+                    packCount,
+                    /*SdkFile.Packages*/ /*sortResult*/s2Result.SortedList.Count - packCount).ConfigureAwait(false);
+            }
+
+            packCount++;
+        }
+
+        foreach (IEnginePackage package in /*sortResult*/s2Result.SortedList.Where(p => p.IsPredefined))
             builder.AppendLine($"#include \"SDK/{package.Name}_Package.h\"");
 
-        foreach (IEnginePackage package in sortResult.SortedList.Where(p => !p.IsPredefined))
+        builder.AppendLine("// !p.isPredefined below");
+
+        foreach (IEnginePackage package in /*sortResult*/s2Result.SortedList.Where(p => !p.IsPredefined))
             builder.AppendLine($"#include \"SDK/{package.Name}_Package.h\"");
 
         return builder.ToString();

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using CG.Framework.Engines.Models;
@@ -112,6 +113,7 @@ public static class LangPrintHelper
     /// <returns>Converted <see cref="CppParameter"/></returns>
     internal static CppParameter ToCpp(this EngineParameter p)
     {
+        Console.WriteLine(p.Name);
         return new CppParameter()
         {
             Name = p.Name,

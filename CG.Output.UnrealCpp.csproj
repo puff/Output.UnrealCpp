@@ -35,7 +35,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\CG.Framework\CG.Framework.csproj" />
+      <Reference Include="CG.Framework">
+        <HintPath>F:\Program Files\CheatGear\CG.Framework.dll</HintPath>
+      </Reference>
+      <Reference Include="LangPrint">
+        <HintPath>..\LangPrint\LangPrint\bin\Release\net6.0\LangPrint.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
